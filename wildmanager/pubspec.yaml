@@ -9,6 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_map: ^6.1.0
+  wildlifenl_map_logic_components:
+    path: ../../wildlifenl-components/wildlifenl_map_logic_components
+  wildlifenl_map_ui_components:
+    path: ../../wildlifenl-components/wildlifenl_map_ui_components
 
 dev_dependencies:
   flutter_test:
