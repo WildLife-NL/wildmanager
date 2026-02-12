@@ -87,7 +87,7 @@ class _AuthGateState extends State<AuthGate> {
       );
     }
     if (_hasToken) {
-      return const HomeScreen();
+      return const MapScreen();
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -116,7 +116,7 @@ class _AuthGateState extends State<AuthGate> {
               }
               if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
+                MaterialPageRoute<void>(builder: (_) => const MapScreen()),
                 (_) => false,
               );
             },
