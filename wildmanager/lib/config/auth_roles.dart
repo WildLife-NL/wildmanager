@@ -5,25 +5,25 @@ const List<String> allowedLoginRoles = [
   'herd-manager',
 ];
 
-/// Controleert of [user] (API-response na verificatie) minstens één toegestane rol heeft.
-/// Ondersteunt zowel 'roles' als 'scopes' in de user-map.
-bool userHasAllowedRole(dynamic user) {
-  if (user == null) return false;
-  List<String> roles = [];
-  if (user is Map<String, dynamic>) {
-    final r = user['roles'];
-    final s = user['scopes'];
-    if (r is List) {
-      for (final e in r) {
-        if (e is String) roles.add(e.trim());
-      }
-    }
-    if (s is List && roles.isEmpty) {
-      for (final e in s) {
-        if (e is String) roles.add(e.trim());
-      }
-    }
+/// Haalt roles/scopes uit de (mogelijk geneste) API-response.
+List<String> _collectRolesFromUser(dynamic user) {
+  if (user == null || user is! Map<String, dynamic>) return [];
+  final m = user;
+  final nested = m['user'] is Map<String, dynamic> ? m['user'] as Map<String, dynamic> : null;
+  final List<String> out = [];
+  for (final map in [m, if (nested != null) nested]) {
+    final r = map['roles'];
+    final s = map['scopes'];
+    if (r is List) for (final e in r) { if (e is String) out.add(e.trim()); }
+    if (s is List) for (final e in s) { if (e is String) out.add(e.trim()); }
   }
+  return out;
+}
+
+/// Controleert of [user] (API-response na verificatie) minstens één toegestane rol heeft.
+/// Ondersteunt zowel 'roles' als 'scopes', en geneste 'user' in de response.
+bool userHasAllowedRole(dynamic user) {
+  final roles = _collectRolesFromUser(user);
   return roles.any((r) => allowedLoginRoles.contains(r));
 }
 

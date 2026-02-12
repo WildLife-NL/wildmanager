@@ -3,7 +3,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:wildlifenl_map_logic_components/wildlifenl_map_logic_components.dart';
+
+import '../models/living_lab.dart';
+import '../services/living_labs_service.dart';
 
 /// Berekent de zichtbare breedte in km uit de kaartbounds (nauwkeurig).
 double visibleWidthKmFromBounds(LatLngBounds bounds) {
@@ -38,12 +42,29 @@ class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
   StreamSubscription<MapEvent>? _mapEventSub;
   double _visibleKm = 0;
+  List<LivingLab>? _livingLabs;
 
   @override
   void initState() {
     super.initState();
     _mapEventSub = _mapController.mapEventStream.listen((_) => _updateVisibleKm());
     WidgetsBinding.instance.addPostFrameCallback((_) => _updateVisibleKm());
+    _loadLivingLabs();
+  }
+
+  Future<void> _loadLivingLabs() async {
+    try {
+      final list = await fetchLivingLabs();
+      if (!mounted) return;
+      setState(() => _livingLabs = list);
+    } on LivingLabsException catch (e) {
+      if (!mounted) return;
+      setState(() => _livingLabs = null);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
   }
 
   @override
@@ -61,6 +82,43 @@ class _MapScreenState extends State<MapScreen> {
         setState(() => _visibleKm = km);
       }
     } catch (_) {}
+  }
+
+  List<Widget> _livingLabPolygonLayers() {
+    final labs = _livingLabs!;
+    final polygons = <Polygon>[];
+    for (final lab in labs) {
+      List<LatLng>? points = lab.definition;
+      if (points == null || points.length < 3) continue;
+      // Sluit polygoon indien eerste en laatste punt niet gelijk zijn
+      if (points.isNotEmpty &&
+          (points.first.latitude != points.last.latitude ||
+              points.first.longitude != points.last.longitude)) {
+        points = [...points, points.first];
+      }
+      polygons.add(
+        Polygon(
+          points: points,
+          color: const Color(0xFF1565C0).withValues(alpha: 0.35),
+          borderColor: const Color(0xFF0D47A1),
+          borderStrokeWidth: 3.5,
+          isDotted: false,
+          label: lab.name,
+          labelStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+          ),
+        ),
+      );
+    }
+    if (polygons.isEmpty) return [];
+    return [
+      PolygonLayer(
+        polygons: polygons,
+        polygonCulling: true,
+      ),
+    ];
   }
 
   @override
@@ -87,6 +145,7 @@ class _MapScreenState extends State<MapScreen> {
                 maxZoom: 18,
               ),
               extraLayers: [
+                if (_livingLabs != null) ..._livingLabPolygonLayers(),
                 MarkerLayer(
                   markers: [
                     Marker(
