@@ -1,10 +1,13 @@
-/// App-configuratie (base URL en naam). Pas aan voor productie.
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class AppConfig {
   AppConfig._();
 
   static const String appName = 'WildManager';
 
-  /// Backend base URL voor login (zonder trailing slash).
-  /// Voor productie: vervang door de echte API-URL (bijv. uit .env).
-  static const String loginBaseUrl = 'https://test-api-wildlifenl.uu.nl';
+  static String get loginBaseUrl {
+    final url = dotenv.env['DEV_BASE_URL']?.trim();
+    if (url == null || url.isEmpty) return '';
+    return url.replaceFirst(RegExp(r'/$'), '');
+  }
 }
