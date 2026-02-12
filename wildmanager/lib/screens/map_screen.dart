@@ -4,10 +4,16 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wildlifenl_map_logic_components/wildlifenl_map_logic_components.dart';
 
 import '../models/living_lab.dart';
 import '../services/living_labs_service.dart';
+
+const _keyMapLat = 'map_center_lat';
+const _keyMapLng = 'map_center_lng';
+const _keyMapZoom = 'map_zoom';
+const _mapSaveDebounceMs = 800;
 
 /// Berekent de zichtbare breedte in km uit de kaartbounds (nauwkeurig).
 double visibleWidthKmFromBounds(LatLngBounds bounds) {
@@ -43,13 +49,59 @@ class _MapScreenState extends State<MapScreen> {
   StreamSubscription<MapEvent>? _mapEventSub;
   double _visibleKm = 0;
   List<LivingLab>? _livingLabs;
+  bool _mapStateLoaded = false;
+  LatLng? _savedCenter;
+  double? _savedZoom;
+  Timer? _saveMapStateDebounce;
 
   @override
   void initState() {
     super.initState();
-    _mapEventSub = _mapController.mapEventStream.listen((_) => _updateVisibleKm());
-    WidgetsBinding.instance.addPostFrameCallback((_) => _updateVisibleKm());
+    _loadMapState().then((_) {
+      _mapEventSub = _mapController.mapEventStream.listen((_) {
+        _updateVisibleKm();
+        _scheduleSaveMapState();
+      });
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _updateVisibleKm());
+      }
+    });
     _loadLivingLabs();
+  }
+
+  Future<void> _loadMapState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lat = prefs.getDouble(_keyMapLat);
+    final lng = prefs.getDouble(_keyMapLng);
+    final zoom = prefs.getDouble(_keyMapZoom);
+    if (!mounted) return;
+    setState(() {
+      _mapStateLoaded = true;
+      _savedCenter = (lat != null && lng != null) ? LatLng(lat, lng) : null;
+      _savedZoom = zoom;
+    });
+  }
+
+  void _scheduleSaveMapState() {
+    _saveMapStateDebounce?.cancel();
+    _saveMapStateDebounce = Timer(
+      const Duration(milliseconds: _mapSaveDebounceMs),
+      _saveMapState,
+    );
+  }
+
+  Future<void> _saveMapState() async {
+    _saveMapStateDebounce?.cancel();
+    _saveMapStateDebounce = null;
+    try {
+      final camera = _mapController.camera;
+      final center = camera.center;
+      final zoom = camera.zoom;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(_keyMapLat, center.latitude);
+      await prefs.setDouble(_keyMapLng, center.longitude);
+      await prefs.setDouble(_keyMapZoom, zoom);
+    } catch (_) {}
   }
 
   Future<void> _loadLivingLabs() async {
@@ -69,6 +121,8 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
+    _saveMapStateDebounce?.cancel();
+    _saveMapState();
     _mapEventSub?.cancel();
     super.dispose();
   }
@@ -123,8 +177,17 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_mapStateLoaded) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final minZoom = zoomForMaxKm(_maxZoomOutKm, MapStateInterface.defaultCenter.latitude, screenWidth);
+    final defaultCenter = MapStateInterface.defaultCenter;
+    final initialCenter = _savedCenter ?? defaultCenter;
+    final initialZoom = _savedZoom ?? 10.0;
+    final minZoom = zoomForMaxKm(_maxZoomOutKm, initialCenter.latitude, screenWidth);
 
     return PopScope(
       canPop: false,
@@ -139,10 +202,13 @@ class _MapScreenState extends State<MapScreen> {
               userAgentPackageName: 'wildmanager',
               mapController: _mapController,
               options: MapOptions(
-                initialCenter: MapStateInterface.defaultCenter,
-                initialZoom: 10,
+                initialCenter: initialCenter,
+                initialZoom: initialZoom,
                 minZoom: minZoom.clamp(5.0, 12.0),
                 maxZoom: 18,
+                interactionOptions: InteractionOptions(
+                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                ),
               ),
               extraLayers: [
                 if (_livingLabs != null) ..._livingLabPolygonLayers(),
@@ -167,8 +233,33 @@ class _MapScreenState extends State<MapScreen> {
               bottom: 24,
               child: _ZoomScaleIndicator(visibleKm: _visibleKm),
             ),
+            Positioned(
+              right: 16,
+              bottom: 24,
+              child: _NorthUpButton(mapController: _mapController),
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _NorthUpButton extends StatelessWidget {
+  const _NorthUpButton({required this.mapController});
+
+  final MapController mapController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 2,
+      borderRadius: BorderRadius.circular(8),
+      color: Colors.white.withValues(alpha: 0.92),
+      child: IconButton(
+        onPressed: () => mapController.rotate(0),
+        icon: Icon(Icons.explore, size: 24, color: Colors.grey.shade700),
+        tooltip: 'Noord naar boven',
       ),
     );
   }
