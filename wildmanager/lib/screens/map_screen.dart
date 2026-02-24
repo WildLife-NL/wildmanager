@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -6,10 +6,13 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wildlifenl_map_logic_components/wildlifenl_map_logic_components.dart';
 
+import '../models/detection.dart';
 import '../models/interaction.dart';
 import '../models/living_lab.dart';
+import '../services/detections_service.dart';
 import '../services/interactions_service.dart';
 import '../services/living_labs_service.dart';
+import 'package:wildlifenl_detection_components/wildlifenl_detection_components.dart';
 import 'map/interaction_filter_sheet.dart';
 import 'map/interaction_theme.dart';
 import 'map/interactions_info.dart';
@@ -26,8 +29,7 @@ const _interactionsDebounceMs = 800;
 const _visibleKmDebounceMs = 250;
 
 const double _maxZoomOutKm = 200;
-const int _maxVisibleMarkersZoomedIn = 150;
-const int _maxVisibleMarkersZoomedOut = 400;
+const int _maxVisibleMarkersCap = 1200;
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -55,6 +57,10 @@ class _MapScreenState extends State<MapScreen> {
   List<Interaction>? _interactions;
   bool _interactionsLoading = false;
 
+  List<Detection>? _detections;
+  bool _detectionsLoading = false;
+  int _detectionRequestId = 0;
+
   int? _lastFetchRadiusMeters;
   LatLng? _lastFetchedCenter;
   double? _lastFetchedVisibleKm;
@@ -64,6 +70,7 @@ class _MapScreenState extends State<MapScreen> {
   Timer? _visibleKmDebounce;
 
   int? _interactionTypeFilter;
+  DetectionType? _detectionTypeFilter;
   DateTime? _momentAfter;
   DateTime? _momentBefore;
 
@@ -118,7 +125,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _checkMapMovedAndReload() {
-    if (!mounted || _interactionsLoading) return;
+    if (!mounted || _interactionsLoading || _detectionsLoading) return;
 
     LatLngBounds bounds;
     try {
@@ -139,7 +146,20 @@ class _MapScreenState extends State<MapScreen> {
         (center.longitude - _lastFetchedCenter!.longitude).abs() > 0.0015;
     final zoomChanged = (visibleKm - _lastFetchedVisibleKm!).abs() > 1.2;
 
-    if (centerMoved || zoomChanged) _scheduleLoadInteractions();
+    if (centerMoved || zoomChanged) {
+      _scheduleLoadInteractions();
+      _scheduleLoadDetections();
+    }
+  }
+
+  Timer? _detectionsDebounce;
+
+  void _scheduleLoadDetections() {
+    _detectionsDebounce?.cancel();
+    _detectionsDebounce = Timer(
+      const Duration(milliseconds: _interactionsDebounceMs),
+      _loadDetections,
+    );
   }
 
   void _scheduleLoadInteractions() {
@@ -223,6 +243,60 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  Future<void> _loadDetections() async {
+    _detectionsDebounce?.cancel();
+    _detectionsDebounce = null;
+    if (!mounted) return;
+
+    LatLngBounds bounds;
+    try {
+      bounds = _mapController.camera.visibleBounds;
+    } catch (_) {
+      return;
+    }
+
+    final center = _mapController.camera.center;
+    final radiusMeters = computeRadiusMetersForBounds(center, bounds);
+    final requestId = ++_detectionRequestId;
+
+    var end = _momentBefore != null
+        ? DateTime(_momentBefore!.year, _momentBefore!.month, _momentBefore!.day, 23, 59, 59, 999)
+        : DateTime.now();
+    var start = _momentAfter ?? end.subtract(const Duration(days: 30));
+    if (start.isAfter(end)) start = end.subtract(const Duration(days: 1));
+
+    setState(() => _detectionsLoading = true);
+    debugPrint('[MapScreen] Detections laden: center=(${center.latitude}, ${center.longitude}) radius=${radiusMeters}m');
+
+    try {
+      final list = await fetchDetections(
+        center: center,
+        radiusMeters: radiusMeters,
+        start: start,
+        end: end,
+        typeFilter: _detectionTypeFilter,
+      );
+
+      if (!mounted) return;
+      if (requestId != _detectionRequestId) return;
+
+      debugPrint('[MapScreen] Detections geladen: ${list.length} stuks');
+      setState(() {
+        _detections = list;
+        _detectionsLoading = false;
+      });
+    } catch (e, st) {
+      if (!mounted) return;
+      if (requestId != _detectionRequestId) return;
+      debugPrint('[MapScreen] Detections fout: $e');
+      debugPrint('[MapScreen] Stack: $st');
+      setState(() {
+        _detections = null;
+        _detectionsLoading = false;
+      });
+    }
+  }
+
   Future<void> _loadMapState() async {
     final prefs = await SharedPreferences.getInstance();
     final lat = prefs.getDouble(_keyMapLat);
@@ -278,6 +352,7 @@ class _MapScreenState extends State<MapScreen> {
     _saveMapStateDebounce?.cancel();
     _visibleKmDebounce?.cancel();
     _interactionsDebounce?.cancel();
+    _detectionsDebounce?.cancel();
     _interactionsPollTimer?.cancel();
     _saveMapState();
     _mapEventSub?.cancel();
@@ -333,44 +408,129 @@ class _MapScreenState extends State<MapScreen> {
     ];
   }
 
-  int _maxMarkersForCurrentZoom() {
-    try {
-      final zoom = _mapController.camera.zoom;
-      if (zoom >= 10) return _maxVisibleMarkersZoomedIn;
-      if (zoom <= 7) return _maxVisibleMarkersZoomedOut;
-      final t = (zoom - 7) / 3;
-      return (_maxVisibleMarkersZoomedOut + t * (_maxVisibleMarkersZoomedIn - _maxVisibleMarkersZoomedOut)).round();
-    } catch (_) {
-      return _maxVisibleMarkersZoomedIn;
-    }
-  }
-
   List<Marker> _interactionMarkers() {
     final list = _interactions;
     if (list == null || list.isEmpty) return [];
-    final maxMarkers = _maxMarkersForCurrentZoom();
     LatLngBounds bounds;
     try {
       bounds = _mapController.camera.visibleBounds;
     } catch (_) {
-      final toShow = list.take(maxMarkers).toList();
-      return toShow.map((i) => _buildInteractionMarker(i)).toList();
+      return list.take(_maxVisibleMarkersCap).map((i) => _buildInteractionMarker(i)).toList();
     }
     final inBounds = list.where((i) => pointInBounds(i.location, bounds)).toList();
-    final toShow = inBounds.take(maxMarkers).toList();
+    final toShow = inBounds.length > _maxVisibleMarkersCap
+        ? inBounds.take(_maxVisibleMarkersCap).toList()
+        : inBounds;
     return toShow.map((i) => _buildInteractionMarker(i)).toList();
   }
 
   int _getVisibleMarkerCount() {
     final list = _interactions;
     if (list == null || list.isEmpty) return 0;
-    final maxMarkers = _maxMarkersForCurrentZoom();
     try {
       final bounds = _mapController.camera.visibleBounds;
-      final inBounds = list.where((i) => pointInBounds(i.location, bounds)).length;
-      return inBounds > maxMarkers ? maxMarkers : inBounds;
+      final count = list.where((i) => pointInBounds(i.location, bounds)).length;
+      return count > _maxVisibleMarkersCap ? _maxVisibleMarkersCap : count;
     } catch (_) {
-      return list.length > maxMarkers ? maxMarkers : list.length;
+      return list.length > _maxVisibleMarkersCap ? _maxVisibleMarkersCap : list.length;
+    }
+  }
+
+  List<Marker> _detectionMarkers() {
+    final list = _detections;
+    if (list == null || list.isEmpty) return [];
+    LatLngBounds bounds;
+    try {
+      bounds = _mapController.camera.visibleBounds;
+    } catch (_) {
+      return list.take(_maxVisibleMarkersCap).map((d) => _buildDetectionMarker(d)).toList();
+    }
+    final inBounds = list.where((d) => pointInBounds(d.location, bounds)).toList();
+    final toShow = inBounds.length > _maxVisibleMarkersCap
+        ? inBounds.take(_maxVisibleMarkersCap).toList()
+        : inBounds;
+    return toShow.map((d) => _buildDetectionMarker(d)).toList();
+  }
+
+  Marker _buildDetectionMarker(Detection d) {
+    return Marker(
+      point: d.location,
+      width: 32,
+      height: 32,
+      child: GestureDetector(
+        onTap: () => _showDetectionDetail(d),
+        child: Material(
+          color: d.type.color,
+          shape: const CircleBorder(),
+          elevation: 2,
+          child: Center(
+            child: Icon(iconForSpecies(d.species), color: Colors.white, size: 18),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDetectionDetail(Detection d) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Material(
+                  color: d.type.color,
+                  shape: const CircleBorder(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Icon(iconForSpecies(d.species), color: Colors.white, size: 24),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _detectionTypeLabel(d.type),
+                    style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            if (d.moment != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                formatMoment(d.moment!),
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+              ),
+            ],
+            if (d.species != null && d.species!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(d.species!, style: TextStyle(fontSize: 14, color: Colors.grey.shade800)),
+            ],
+            const SizedBox(height: 8),
+            Text(
+              'Locatie: ${d.location.latitude.toStringAsFixed(5)}, ${d.location.longitude.toStringAsFixed(5)}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _detectionTypeLabel(DetectionType t) {
+    switch (t) {
+      case DetectionType.visual:
+        return 'Visueel';
+      case DetectionType.acoustic:
+        return 'Acoustisch';
+      case DetectionType.chemical:
+        return 'Chemisch';
+      case DetectionType.other:
+        return 'Detectie';
     }
   }
 
@@ -489,16 +649,20 @@ class _MapScreenState extends State<MapScreen> {
       context: context,
       builder: (ctx) => InteractionFilterSheet(
         typeFilter: _interactionTypeFilter,
+        detectionTypeFilter: _detectionTypeFilter,
         momentAfter: _momentAfter,
         momentBefore: _momentBefore,
-        onApply: (typeId, after, before) {
+        onApply: (typeId, detectionType, after, before) {
           setState(() {
             _interactionTypeFilter = typeId;
+            _detectionTypeFilter = detectionType;
             _momentAfter = after;
             _momentBefore = before;
             _interactions = null;
+            _detections = null;
           });
           _loadInteractions();
+          _loadDetections();
           Navigator.of(ctx).pop();
         },
       ),
@@ -546,6 +710,7 @@ class _MapScreenState extends State<MapScreen> {
               ),
               extraLayers: [
                 if (_livingLabs != null) ..._livingLabPolygonLayers(),
+                MarkerLayer(markers: _detectionMarkers()),
                 MarkerLayer(
                   markers: _interactionMarkers(),
                 ),
@@ -590,7 +755,7 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
             ),
-            if (_interactionsLoading)
+            if (_interactionsLoading || _detectionsLoading)
               const Positioned(
                 top: 48,
                 left: 0,

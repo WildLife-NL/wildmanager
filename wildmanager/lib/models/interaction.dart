@@ -1,6 +1,5 @@
 import 'package:latlong2/latlong.dart';
 
-/// Interaction type IDs from the API: 1 = sighting, 2 = damage, 3 = collision.
 const int interactionTypeSighting = 1;
 const int interactionTypeDamage = 2;
 const int interactionTypeCollision = 3;

@@ -31,7 +31,15 @@ dependencies:
       ref: Wildlife-rapport-Components
       path: wildlifenl_map_ui_components
   wildlifenl_interaction_components:
-    path: packages/wildlifenl_interaction_components
+    git:
+      url: https://github.com/WildLife-NL/wildlifenl-components.git
+      ref: Wildlife-rapport-Components
+      path: wildlifenl_interaction_components
+  wildlifenl_detection_components:
+    git:
+      url: https://github.com/WildLife-NL/wildlifenl-components.git
+      ref: Wildlife-rapport-Components
+      path: wildlifenl_detection_components
 
 dev_dependencies:
   flutter_test:

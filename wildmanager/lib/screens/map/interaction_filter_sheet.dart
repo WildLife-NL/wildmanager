@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wildlifenl_detection_components/wildlifenl_detection_components.dart';
 
 import '../../models/interaction.dart';
 
@@ -6,15 +7,17 @@ class InteractionFilterSheet extends StatefulWidget {
   const InteractionFilterSheet({
     super.key,
     required this.typeFilter,
+    required this.detectionTypeFilter,
     required this.momentAfter,
     required this.momentBefore,
     required this.onApply,
   });
 
   final int? typeFilter;
+  final DetectionType? detectionTypeFilter;
   final DateTime? momentAfter;
   final DateTime? momentBefore;
-  final void Function(int? typeId, DateTime? after, DateTime? before) onApply;
+  final void Function(int? typeId, DetectionType? detectionType, DateTime? after, DateTime? before) onApply;
 
   @override
   State<InteractionFilterSheet> createState() => _InteractionFilterSheetState();
@@ -22,6 +25,7 @@ class InteractionFilterSheet extends StatefulWidget {
 
 class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
   late int? _selectedType;
+  late DetectionType? _selectedDetectionType;
   late DateTime? _momentAfter;
   late DateTime? _momentBefore;
 
@@ -29,6 +33,7 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
   void initState() {
     super.initState();
     _selectedType = widget.typeFilter;
+    _selectedDetectionType = widget.detectionTypeFilter;
     _momentAfter = widget.momentAfter;
     _momentBefore = widget.momentBefore;
   }
@@ -38,22 +43,28 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Interactie-filters', style: Theme.of(context).textTheme.titleLarge),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: 24 + MediaQuery.of(context).padding.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+          Text('Filters', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 6),
           Text(
-            'Na "Toepassen" worden interacties opnieuw geladen voor het huidige kaartgebied.',
+            'Na "Toepassen" worden interacties en detections opnieuw geladen voor het huidige kaartgebied.',
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<int?>(
             value: _selectedType,
-            decoration: const InputDecoration(labelText: 'Type'),
+            decoration: const InputDecoration(labelText: 'Interactie type'),
             items: const [
               DropdownMenuItem(value: null, child: Text('Alle types')),
               DropdownMenuItem(value: interactionTypeSighting, child: Text('Waarneming')),
@@ -61,6 +72,19 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
               DropdownMenuItem(value: interactionTypeCollision, child: Text('Aanrijding')),
             ],
             onChanged: (v) => setState(() => _selectedType = v),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<DetectionType?>(
+            value: _selectedDetectionType,
+            decoration: const InputDecoration(labelText: 'Detectie type'),
+            items: const [
+              DropdownMenuItem(value: null, child: Text('Alle detecties')),
+              DropdownMenuItem(value: DetectionType.visual, child: Text('Visueel')),
+              DropdownMenuItem(value: DetectionType.acoustic, child: Text('Acoustisch')),
+              DropdownMenuItem(value: DetectionType.chemical, child: Text('Chemisch')),
+              DropdownMenuItem(value: DetectionType.other, child: Text('Overig')),
+            ],
+            onChanged: (v) => setState(() => _selectedDetectionType = v),
           ),
           const SizedBox(height: 12),
           ListTile(
@@ -98,10 +122,11 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
                 onPressed: () {
                   setState(() {
                     _selectedType = null;
+                    _selectedDetectionType = null;
                     _momentAfter = null;
                     _momentBefore = null;
                   });
-                  widget.onApply(null, null, null);
+                  widget.onApply(null, null, null, null);
                 },
                 child: const Text('Wissen'),
               ),
@@ -117,7 +142,7 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
                       );
                       return;
                     }
-                    widget.onApply(_selectedType, _momentAfter, _momentBefore);
+                    widget.onApply(_selectedType, _selectedDetectionType, _momentAfter, _momentBefore);
                   },
                   child: const Text('Toepassen'),
                 ),
@@ -125,6 +150,7 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
             ],
           ),
         ],
+        ),
       ),
     );
   }

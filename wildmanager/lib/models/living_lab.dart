@@ -1,6 +1,5 @@
 import 'package:latlong2/latlong.dart';
 
-/// Living lab from the API (GET /livinglabs/).
 class LivingLab {
   const LivingLab({
     required this.id,
@@ -10,7 +9,6 @@ class LivingLab {
 
   final String id;
   final String name;
-  /// Polygon points (latitude, longitude). Null or &lt; 3 points = no area to draw.
   final List<LatLng>? definition;
 
   static LivingLab fromJson(Map<String, dynamic> json) {

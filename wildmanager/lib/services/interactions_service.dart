@@ -7,9 +7,6 @@ import '../models/interaction.dart';
 const int _minRadiusMeters = 1;
 const int _maxRadiusMeters = 10000;
 
-/// Fetches interactions in the given area (and optional time range).
-/// [center] and [radiusMeters] define the area (radius clamped to 1–10000 m).
-/// Returns parsed [Interaction] list; filters by [interactionTypeId] if non-null (1=sighting, 2=damage, 3=collision).
 Future<List<Interaction>> fetchInteractions({
   required LatLng center,
   required int radiusMeters,

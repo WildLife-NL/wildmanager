@@ -1,0 +1,16 @@
+name: wildlifenl_detection_components
+description: WildLifeNL Detections – API voor GET /detection/ (detections binnen spatiotemporele span). Herbruikbaar voor Wild Rapport, WildManager en andere apps.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.7.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.3.0
+  shared_preferences: ^2.5.3
+
+dev_dependencies:
+  flutter_lints: ^5.0.0

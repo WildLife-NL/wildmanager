@@ -51,7 +51,6 @@ class MainApp extends StatelessWidget {
   }
 }
 
-/// Toont eerst laadstatus, daarna hoofdscherm of navigeert naar apart loginscherm.
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
@@ -155,7 +154,6 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-/// Beperkt breedte op desktop en centreert de inhoud voor betere schaling.
 class _DesktopFriendlyLayout extends StatelessWidget {
   const _DesktopFriendlyLayout({required this.child});
 
