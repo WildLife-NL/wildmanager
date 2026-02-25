@@ -38,8 +38,8 @@ class Interaction {
       final location = LatLng(lat, lng);
 
       final type = json['type'] as Map<String, dynamic>?;
-      final typeId = (type?['ID'] as num?)?.toInt() ?? 0;
-      final typeName = type?['name'] as String? ?? '';
+      final typeId = (type?['ID'] as num?)?.toInt() ?? (type?['id'] as num?)?.toInt() ?? 0;
+      final typeName = type?['name'] as String? ?? type?['typeName'] as String? ?? '';
 
       final momentStr = json['moment'] as String?;
       DateTime? moment;
@@ -51,16 +51,19 @@ class Interaction {
 
       String? speciesCommonName;
       String? speciesCategory;
-      final sighting = json['reportOfSighting'] as Map<String, dynamic>?;
+      final sighting = json['reportOfSighting'] as Map<String, dynamic>? ?? json['report_of_sighting'] as Map<String, dynamic>?;
       if (sighting != null) {
-        final involved = sighting['involvedAnimals'] as List<dynamic>?;
+        final involved = sighting['involvedAnimals'] as List<dynamic>? ?? sighting['involved_animals'] as List<dynamic>?;
         final first = involved?.isNotEmpty == true ? involved!.first as Map<String, dynamic>? : null;
         final species = first?['species'] ?? sighting['species'] as Map<String, dynamic>?;
         if (species != null) {
-          speciesCommonName = species['commonName'] as String?;
-          speciesCategory = species['category'] as String?;
+          speciesCommonName = species['commonName'] as String? ?? species['common_name'] as String? ?? species['name'] as String?;
+          speciesCategory = species['category'] as String? ?? species['speciesCategory'] as String?;
         }
       }
+      // Top-level fallback als de API species direct op de interaction zet
+      speciesCommonName ??= json['speciesCommonName'] as String? ?? json['species_common_name'] as String?;
+      speciesCategory ??= json['speciesCategory'] as String? ?? json['species_category'] as String?;
 
       return Interaction(
         id: id,

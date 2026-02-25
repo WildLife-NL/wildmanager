@@ -45,6 +45,11 @@ dependencies:
       url: https://github.com/WildLife-NL/wildlifenl-components.git
       ref: Wildlife-rapport-Components
       path: wildlifenl_visitation_components
+  wildlifenl_assets:
+    git:
+      url: https://github.com/WildLife-NL/wildlifenl-components.git
+      ref: Wildlife-rapport-Components
+      path: wildlifenl_assets_components
 
 dev_dependencies:
   flutter_test:

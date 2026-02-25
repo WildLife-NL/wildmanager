@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -13,6 +13,7 @@ import '../services/detections_service.dart';
 import '../services/interactions_service.dart';
 import '../services/living_labs_service.dart';
 import '../services/visitation_service.dart';
+import 'package:wildlifenl_assets/wildlifenl_assets.dart';
 import 'package:wildlifenl_detection_components/wildlifenl_detection_components.dart';
 import 'package:wildlifenl_visitation_components/wildlifenl_visitation_components.dart';
 import 'map/interaction_filter_sheet.dart';
@@ -522,6 +523,23 @@ class _MapScreenState extends State<MapScreen> {
     return toShow.map((d) => _buildDetectionMarker(d)).toList();
   }
 
+  static const String _assetsPackage = 'wildlifenl_assets';
+
+  Widget _detectionIcon(String? species, {required double size}) {
+    final fullPath = getAnimalIconPath(species);
+    if (fullPath != null) {
+      final relativePath = fullPath.replaceFirst('packages/$_assetsPackage/', '');
+      return Image.asset(
+        relativePath,
+        package: _assetsPackage,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+      );
+    }
+    return Icon(Icons.pets, color: Colors.white, size: size);
+  }
+
   Marker _buildDetectionMarker(Detection d) {
     return Marker(
       point: d.location,
@@ -534,7 +552,7 @@ class _MapScreenState extends State<MapScreen> {
           shape: const CircleBorder(),
           elevation: 2,
           child: Center(
-            child: Icon(iconForSpecies(d.species), color: Colors.white, size: 18),
+            child: _detectionIcon(d.species, size: 18),
           ),
         ),
       ),
@@ -557,7 +575,7 @@ class _MapScreenState extends State<MapScreen> {
                   shape: const CircleBorder(),
                   child: Padding(
                     padding: const EdgeInsets.all(10),
-                    child: Icon(iconForSpecies(d.species), color: Colors.white, size: 24),
+                    child: _detectionIcon(d.species, size: 24),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -604,9 +622,25 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  Widget _interactionIcon(Interaction i, {required double size}) {
+    if (i.typeId == interactionTypeSighting && i.speciesCommonName != null) {
+      final fullPath = getAnimalIconPath(i.speciesCommonName);
+      if (fullPath != null) {
+        final relativePath = fullPath.replaceFirst('packages/$_assetsPackage/', '');
+        return Image.asset(
+          relativePath,
+          package: _assetsPackage,
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+        );
+      }
+    }
+    return Icon(iconForInteractionType(i.typeId), color: Colors.white, size: size);
+  }
+
   Marker _buildInteractionMarker(Interaction i) {
     final color = colorForInteractionType(i.typeId);
-    final iconData = iconForInteractionType(i.typeId);
     return Marker(
       point: i.location,
       width: 36,
@@ -618,7 +652,7 @@ class _MapScreenState extends State<MapScreen> {
           shape: const CircleBorder(),
           elevation: 2,
           child: Center(
-            child: Icon(iconData, color: Colors.white, size: 20),
+            child: _interactionIcon(i, size: 20),
           ),
         ),
       ),
@@ -628,7 +662,6 @@ class _MapScreenState extends State<MapScreen> {
   void _showInteractionDetail(Interaction interaction) {
     final typeLabel = typeLabelForInteraction(interaction);
     final typeColor = colorForInteractionType(interaction.typeId);
-    final typeIcon = iconForInteractionType(interaction.typeId);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -649,7 +682,7 @@ class _MapScreenState extends State<MapScreen> {
                     shape: const CircleBorder(),
                     child: Padding(
                       padding: const EdgeInsets.all(10),
-                      child: Icon(typeIcon, color: Colors.white, size: 24),
+                      child: _interactionIcon(interaction, size: 24),
                     ),
                   ),
                   const SizedBox(width: 12),
