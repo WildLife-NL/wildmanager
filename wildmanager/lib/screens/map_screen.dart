@@ -12,7 +12,9 @@ import '../models/living_lab.dart';
 import '../services/detections_service.dart';
 import '../services/interactions_service.dart';
 import '../services/living_labs_service.dart';
+import '../services/visitation_service.dart';
 import 'package:wildlifenl_detection_components/wildlifenl_detection_components.dart';
+import 'package:wildlifenl_visitation_components/wildlifenl_visitation_components.dart';
 import 'map/interaction_filter_sheet.dart';
 import 'map/interaction_theme.dart';
 import 'map/interactions_info.dart';
@@ -29,6 +31,7 @@ const _interactionsDebounceMs = 800;
 const _visibleKmDebounceMs = 250;
 
 const double _maxZoomOutKm = 200;
+const double _minVisibleWidthM = 50;
 const int _maxVisibleMarkersCap = 1200;
 
 class MapScreen extends StatefulWidget {
@@ -47,6 +50,8 @@ class _MapScreenState extends State<MapScreen> {
   double _screenWidthPx = 400;
 
   List<LivingLab>? _livingLabs;
+  List<HeatmapCell>? _heatmapCells;
+  bool _heatmapLoading = false;
 
   bool _mapStateLoaded = false;
   LatLng? _savedCenter;
@@ -73,6 +78,8 @@ class _MapScreenState extends State<MapScreen> {
   DetectionType? _detectionTypeFilter;
   DateTime? _momentAfter;
   DateTime? _momentBefore;
+  int? _heatmapRoodVanaf;
+  double? _heatmapCellSizeMeters;
 
   int _interactionRequestId = 0;
 
@@ -337,6 +344,7 @@ class _MapScreenState extends State<MapScreen> {
       final list = await fetchLivingLabs();
       if (!mounted) return;
       setState(() => _livingLabs = list);
+      _loadVisitation();
     } on LivingLabsException catch (e) {
       if (!mounted) return;
       setState(() => _livingLabs = null);
@@ -370,6 +378,68 @@ class _MapScreenState extends State<MapScreen> {
     if (mounted && (_visibleKm - clamped).abs() > 0.5) {
       setState(() => _visibleKm = clamped);
     }
+  }
+
+  Future<void> _loadVisitation() async {
+    final labs = _livingLabs;
+    if (labs == null || labs.isEmpty) {
+      setState(() {
+        _heatmapCells = null;
+        _heatmapLoading = false;
+      });
+      return;
+    }
+    setState(() => _heatmapLoading = true);
+    try {
+      final cellSize = _heatmapCellSizeMeters ?? defaultVisitationCellSize;
+      final cells = await fetchVisitationForLivingLabs(
+        labs,
+        cellSize: cellSize,
+        maxCount: _heatmapRoodVanaf,
+      );
+      if (!mounted) return;
+      setState(() {
+        _heatmapCells = cells;
+        _heatmapLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _heatmapCells = null;
+        _heatmapLoading = false;
+      });
+    }
+  }
+
+  List<Widget> _heatmapLayers() {
+    final cells = _heatmapCells;
+    if (cells == null || cells.isEmpty) return [];
+
+    final withCount = cells.where((c) => c.count > 0).toList();
+    if (withCount.isEmpty) return [];
+
+    final cellSize = _heatmapCellSizeMeters ?? defaultVisitationCellSize;
+    final radiusMeters = heatmapCircleRadiusMeters(cellSize);
+
+    final circles = withCount.map((c) {
+      final intensity = c.intensity.clamp(0.0, 1.0);
+
+      final color = Color.lerp(
+        const Color(0xFF2E7D32),
+        const Color(0xFFC62828),
+        intensity,
+      )!.withValues(alpha: 0.35 + 0.5 * intensity);
+
+      return CircleMarker(
+        point: LatLng(c.latitude, c.longitude),
+        radius: radiusMeters,
+        useRadiusInMeter: true,
+        color: color,
+        borderStrokeWidth: 0,
+      );
+    }).toList();
+
+    return [CircleLayer(circles: circles)];
   }
 
   List<Widget> _livingLabPolygonLayers() {
@@ -652,17 +722,22 @@ class _MapScreenState extends State<MapScreen> {
         detectionTypeFilter: _detectionTypeFilter,
         momentAfter: _momentAfter,
         momentBefore: _momentBefore,
-        onApply: (typeId, detectionType, after, before) {
+        heatmapRoodVanaf: _heatmapRoodVanaf,
+        heatmapCellSizeMeters: _heatmapCellSizeMeters,
+        onApply: (typeId, detectionType, after, before, {heatmapRoodVanaf, heatmapCellSizeMeters}) {
           setState(() {
             _interactionTypeFilter = typeId;
             _detectionTypeFilter = detectionType;
             _momentAfter = after;
             _momentBefore = before;
+            _heatmapRoodVanaf = heatmapRoodVanaf;
+            _heatmapCellSizeMeters = heatmapCellSizeMeters;
             _interactions = null;
             _detections = null;
           });
           _loadInteractions();
           _loadDetections();
+          _loadVisitation();
           Navigator.of(ctx).pop();
         },
       ),
@@ -686,6 +761,8 @@ class _MapScreenState extends State<MapScreen> {
 
     final minZoomRaw = zoomForMaxKm(_maxZoomOutKm, initialCenter.latitude, screenWidth);
     final minZoom = minZoomRaw.clamp(5.0, 12.0);
+    final maxZoomRaw = zoomForMaxKm(_minVisibleWidthM / 1000.0, initialCenter.latitude, screenWidth);
+    final maxZoom = maxZoomRaw.clamp(14.0, 22.0);
 
     return PopScope(
       canPop: false,
@@ -703,13 +780,14 @@ class _MapScreenState extends State<MapScreen> {
                 initialCenter: initialCenter,
                 initialZoom: initialZoom,
                 minZoom: minZoom,
-                maxZoom: 18,
+                maxZoom: maxZoom,
                 interactionOptions: InteractionOptions(
                   flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                 ),
               ),
               extraLayers: [
                 if (_livingLabs != null) ..._livingLabPolygonLayers(),
+                if (_livingLabs != null) ..._heatmapLayers(),
                 MarkerLayer(markers: _detectionMarkers()),
                 MarkerLayer(
                   markers: _interactionMarkers(),
@@ -755,7 +833,7 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
             ),
-            if (_interactionsLoading || _detectionsLoading)
+            if (_interactionsLoading || _detectionsLoading || _heatmapLoading)
               const Positioned(
                 top: 48,
                 left: 0,

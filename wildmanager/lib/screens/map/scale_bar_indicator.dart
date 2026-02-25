@@ -17,8 +17,8 @@ class ScaleBarIndicator extends StatefulWidget {
 
 class _ScaleBarIndicatorState extends State<ScaleBarIndicator> {
   static const List<int> _allowedMeters = [
-    50000, 20000, 10000, 9000, 8000, 7000, 6000, 5000,
-    3000, 2000, 1500, 1000, 750, 500, 400, 300, 200, 150, 100,
+    50000, 20000, 10000, 9000, 8000, 7000, 6000, 5000, 4500, 4000, 3500,
+    3000, 2500, 2000, 1500, 1000, 750, 500, 400, 300, 250, 200, 150, 100, 75, 50,
   ];
 
   double _barPx = 90;
@@ -94,7 +94,6 @@ class _ScaleBarIndicatorState extends State<ScaleBarIndicator> {
     }
 
     final label = chosenM >= 1000 ? '${chosenM ~/ 1000} km' : '${chosenM} m';
-
     if ((chosenPx - _barPx).abs() > 1 || label != _label) {
       setState(() {
         _barPx = chosenPx;

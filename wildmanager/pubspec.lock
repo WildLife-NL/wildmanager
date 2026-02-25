@@ -658,6 +658,15 @@ packages:
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "1.1.0"
+  wildlifenl_visitation_components:
+    dependency: "direct main"
+    description:
+      path: wildlifenl_visitation_components
+      ref: Wildlife-rapport-Components
+      resolved-ref: "72b14612da0dec7effe651d61b6575aaf93a86b7"
+      url: "https://github.com/WildLife-NL/wildlifenl-components.git"
+    source: git
+    version: "0.1.0"
   win32:
     dependency: transitive
     description:

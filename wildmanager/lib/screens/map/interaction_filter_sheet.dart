@@ -10,6 +10,8 @@ class InteractionFilterSheet extends StatefulWidget {
     required this.detectionTypeFilter,
     required this.momentAfter,
     required this.momentBefore,
+    this.heatmapRoodVanaf,
+    this.heatmapCellSizeMeters,
     required this.onApply,
   });
 
@@ -17,7 +19,16 @@ class InteractionFilterSheet extends StatefulWidget {
   final DetectionType? detectionTypeFilter;
   final DateTime? momentAfter;
   final DateTime? momentBefore;
-  final void Function(int? typeId, DetectionType? detectionType, DateTime? after, DateTime? before) onApply;
+  final int? heatmapRoodVanaf;
+  final double? heatmapCellSizeMeters;
+  final void Function(
+    int? typeId,
+    DetectionType? detectionType,
+    DateTime? after,
+    DateTime? before, {
+    int? heatmapRoodVanaf,
+    double? heatmapCellSizeMeters,
+  }) onApply;
 
   @override
   State<InteractionFilterSheet> createState() => _InteractionFilterSheetState();
@@ -28,6 +39,8 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
   late DetectionType? _selectedDetectionType;
   late DateTime? _momentAfter;
   late DateTime? _momentBefore;
+  late TextEditingController _roodVanafController;
+  late TextEditingController _cellSizeController;
 
   @override
   void initState() {
@@ -36,6 +49,19 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
     _selectedDetectionType = widget.detectionTypeFilter;
     _momentAfter = widget.momentAfter;
     _momentBefore = widget.momentBefore;
+    _roodVanafController = TextEditingController(
+      text: widget.heatmapRoodVanaf?.toString() ?? '',
+    );
+    _cellSizeController = TextEditingController(
+      text: widget.heatmapCellSizeMeters?.toString() ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _roodVanafController.dispose();
+    _cellSizeController.dispose();
+    super.dispose();
   }
 
   static String _formatDate(DateTime d) =>
@@ -115,6 +141,26 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
               if (date != null) setState(() => _momentBefore = date);
             },
           ),
+          const SizedBox(height: 20),
+          Text('Heatmap', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _roodVanafController,
+            decoration: const InputDecoration(
+              labelText: 'Rood vanaf',
+              hintText: 'bijv. 35',
+            ),
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _cellSizeController,
+            decoration: const InputDecoration(
+              labelText: 'Celgrootte (meters)',
+              hintText: 'bijv. 50, 75, 100',
+            ),
+            keyboardType: TextInputType.number,
+          ),
           const SizedBox(height: 24),
           Row(
             children: [
@@ -125,8 +171,10 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
                     _selectedDetectionType = null;
                     _momentAfter = null;
                     _momentBefore = null;
+                    _roodVanafController.text = '';
+                    _cellSizeController.text = '';
                   });
-                  widget.onApply(null, null, null, null);
+                  widget.onApply(null, null, null, null, heatmapRoodVanaf: null, heatmapCellSizeMeters: null);
                 },
                 child: const Text('Wissen'),
               ),
@@ -142,7 +190,16 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
                       );
                       return;
                     }
-                    widget.onApply(_selectedType, _selectedDetectionType, _momentAfter, _momentBefore);
+                    final roodVanaf = int.tryParse(_roodVanafController.text.trim());
+                    final cellSizeM = double.tryParse(_cellSizeController.text.trim());
+                    widget.onApply(
+                      _selectedType,
+                      _selectedDetectionType,
+                      _momentAfter,
+                      _momentBefore,
+                      heatmapRoodVanaf: roodVanaf,
+                      heatmapCellSizeMeters: cellSizeM,
+                    );
                   },
                   child: const Text('Toepassen'),
                 ),

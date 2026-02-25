@@ -51,6 +51,28 @@ bool pointInBounds(LatLng point, LatLngBounds bounds) {
   return point.longitude >= w || point.longitude <= e;
 }
 
+const double _wgs84RadiusM = 6378137.0;
+
+double heatmapCircleRadiusMeters(double cellSize) => (cellSize / 2) * 0.85;
+
+List<LatLng> squareCornersFromCenter(LatLng center, double halfSideMeters) {
+  final latRad = center.latitude * math.pi / 180;
+  final cosLat = math.cos(latRad);
+  final radPerDeg = math.pi / 180;
+
+  final dLonRad = halfSideMeters / _wgs84RadiusM;
+  final dLatRad = (halfSideMeters * cosLat) / _wgs84RadiusM;
+  final dLonDeg = dLonRad / radPerDeg;
+  final dLatDeg = dLatRad / radPerDeg;
+
+  return [
+    LatLng(center.latitude + dLatDeg, center.longitude - dLonDeg),
+    LatLng(center.latitude + dLatDeg, center.longitude + dLonDeg),
+    LatLng(center.latitude - dLatDeg, center.longitude + dLonDeg),
+    LatLng(center.latitude - dLatDeg, center.longitude - dLonDeg),
+  ];
+}
+
 int computeRadiusMetersForBounds(LatLng center, LatLngBounds bounds) {
   final dist = const Distance();
   final corners = <LatLng>[
