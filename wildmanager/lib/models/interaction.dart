@@ -68,7 +68,6 @@ class Interaction {
         }
         speciesCommonName ??= first?['speciesCommonName'] as String? ?? first?['species_common_name'] as String? ?? first?['commonName'] as String?;
       }
-      // Top-level: API zet species soms direct op de interaction
       speciesCommonName ??= json['speciesCommonName'] as String? ?? json['species_common_name'] as String?;
       final topSpecies = json['species'] as Map<String, dynamic>?;
       speciesCommonName ??= fromSpecies(topSpecies);

@@ -613,6 +613,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
+  wildlifenl_animal_components:
+    dependency: "direct main"
+    description:
+      path: wildlifenl_animal_components
+      ref: Wildlife-rapport-Components
+      resolved-ref: "9f2852bc2f66ea1d46bc754f970cd3ba35b9cf4c"
+      url: "https://github.com/WildLife-NL/wildlifenl-components.git"
+    source: git
+    version: "0.1.0"
   wildlifenl_assets:
     dependency: "direct main"
     description:

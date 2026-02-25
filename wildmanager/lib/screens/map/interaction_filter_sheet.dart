@@ -12,6 +12,7 @@ class InteractionFilterSheet extends StatefulWidget {
     required this.momentBefore,
     this.heatmapRoodVanaf,
     this.heatmapCellSizeMeters,
+    this.showAnimals = true,
     required this.onApply,
   });
 
@@ -21,6 +22,7 @@ class InteractionFilterSheet extends StatefulWidget {
   final DateTime? momentBefore;
   final int? heatmapRoodVanaf;
   final double? heatmapCellSizeMeters;
+  final bool showAnimals;
   final void Function(
     int? typeId,
     DetectionType? detectionType,
@@ -28,6 +30,7 @@ class InteractionFilterSheet extends StatefulWidget {
     DateTime? before, {
     int? heatmapRoodVanaf,
     double? heatmapCellSizeMeters,
+    bool? showAnimals,
   }) onApply;
 
   @override
@@ -39,6 +42,7 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
   late DetectionType? _selectedDetectionType;
   late DateTime? _momentAfter;
   late DateTime? _momentBefore;
+  late bool _showAnimals;
   late TextEditingController _roodVanafController;
   late TextEditingController _cellSizeController;
 
@@ -49,6 +53,7 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
     _selectedDetectionType = widget.detectionTypeFilter;
     _momentAfter = widget.momentAfter;
     _momentBefore = widget.momentBefore;
+    _showAnimals = widget.showAnimals;
     _roodVanafController = TextEditingController(
       text: widget.heatmapRoodVanaf?.toString() ?? '',
     );
@@ -113,6 +118,13 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
             onChanged: (v) => setState(() => _selectedDetectionType = v),
           ),
           const SizedBox(height: 12),
+          SwitchListTile(
+            title: const Text('Dieren op kaart'),
+            subtitle: const Text('Toon dieren binnen het tijdsbereik'),
+            value: _showAnimals,
+            onChanged: (v) => setState(() => _showAnimals = v),
+          ),
+          const SizedBox(height: 12),
           ListTile(
             title: Text(_momentAfter == null ? 'Vanaf datum' : 'Van: ${_formatDate(_momentAfter!)}'),
             trailing: const Icon(Icons.calendar_today),
@@ -165,16 +177,17 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
           Row(
             children: [
               TextButton(
-                onPressed: () {
+                  onPressed: () {
                   setState(() {
                     _selectedType = null;
                     _selectedDetectionType = null;
                     _momentAfter = null;
                     _momentBefore = null;
+                    _showAnimals = true;
                     _roodVanafController.text = '';
                     _cellSizeController.text = '';
                   });
-                  widget.onApply(null, null, null, null, heatmapRoodVanaf: null, heatmapCellSizeMeters: null);
+                  widget.onApply(null, null, null, null, heatmapRoodVanaf: null, heatmapCellSizeMeters: null, showAnimals: true);
                 },
                 child: const Text('Wissen'),
               ),
@@ -199,6 +212,7 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
                       _momentBefore,
                       heatmapRoodVanaf: roodVanaf,
                       heatmapCellSizeMeters: cellSizeM,
+                      showAnimals: _showAnimals,
                     );
                   },
                   child: const Text('Toepassen'),

@@ -10,16 +10,19 @@ import 'package:wildlifenl_map_logic_components/wildlifenl_map_logic_components.
 import '../models/detection.dart';
 import '../models/interaction.dart';
 import '../models/living_lab.dart';
+import '../services/animals_service.dart';
 import '../services/detections_service.dart';
 import '../services/interactions_service.dart';
 import '../services/living_labs_service.dart';
 import '../services/visitation_service.dart';
+import 'package:wildlifenl_animal_components/wildlifenl_animal_components.dart';
 import 'package:wildlifenl_assets/wildlifenl_assets.dart';
 import 'package:wildlifenl_detection_components/wildlifenl_detection_components.dart';
 import 'package:wildlifenl_visitation_components/wildlifenl_visitation_components.dart';
 import 'map/interaction_filter_sheet.dart';
 import 'map/interaction_theme.dart';
 import 'map/interactions_info.dart';
+import 'map/map_legend.dart';
 import 'map/map_math.dart';
 import 'map/north_up_button.dart';
 import 'map/scale_bar_indicator.dart';
@@ -68,6 +71,11 @@ class _MapScreenState extends State<MapScreen> {
   bool _detectionsLoading = false;
   int _detectionRequestId = 0;
 
+  List<Animal>? _animals;
+  bool _animalsLoading = false;
+  int _animalRequestId = 0;
+  Timer? _animalsDebounce;
+
   int? _lastFetchRadiusMeters;
   LatLng? _lastFetchedCenter;
   double? _lastFetchedVisibleKm;
@@ -82,6 +90,9 @@ class _MapScreenState extends State<MapScreen> {
   DateTime? _momentBefore;
   int? _heatmapRoodVanaf;
   double? _heatmapCellSizeMeters;
+  bool _showAnimals = true;
+
+  bool _showLegend = false;
 
   int _interactionRequestId = 0;
 
@@ -134,7 +145,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _checkMapMovedAndReload() {
-    if (!mounted || _interactionsLoading || _detectionsLoading) return;
+    if (!mounted || _interactionsLoading || _detectionsLoading || _animalsLoading) return;
 
     LatLngBounds bounds;
     try {
@@ -158,6 +169,7 @@ class _MapScreenState extends State<MapScreen> {
     if (centerMoved || zoomChanged) {
       _scheduleLoadInteractions();
       _scheduleLoadDetections();
+      if (_showAnimals) _scheduleLoadAnimals();
     }
   }
 
@@ -168,6 +180,14 @@ class _MapScreenState extends State<MapScreen> {
     _detectionsDebounce = Timer(
       const Duration(milliseconds: _interactionsDebounceMs),
       _loadDetections,
+    );
+  }
+
+  void _scheduleLoadAnimals() {
+    _animalsDebounce?.cancel();
+    _animalsDebounce = Timer(
+      const Duration(milliseconds: _interactionsDebounceMs),
+      _loadAnimals,
     );
   }
 
@@ -241,6 +261,8 @@ class _MapScreenState extends State<MapScreen> {
         _lastFetchedCenter = requestedCenter;
         _lastFetchedVisibleKm = visibleWidthKmFromBounds(nowBounds);
       });
+      _scheduleLoadDetections();
+      if (_showAnimals) _scheduleLoadAnimals();
     } catch (_) {
       if (!mounted) return;
       if (requestId != _interactionRequestId) return;
@@ -306,6 +328,55 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  Future<void> _loadAnimals() async {
+    _animalsDebounce?.cancel();
+    _animalsDebounce = null;
+    if (!mounted) return;
+
+    LatLngBounds bounds;
+    try {
+      bounds = _mapController.camera.visibleBounds;
+    } catch (_) {
+      return;
+    }
+
+    final center = _mapController.camera.center;
+    final radiusMeters = computeRadiusMetersForBounds(center, bounds);
+    final requestId = ++_animalRequestId;
+
+    var end = _momentBefore != null
+        ? DateTime(_momentBefore!.year, _momentBefore!.month, _momentBefore!.day, 23, 59, 59, 999)
+        : DateTime.now();
+    var start = _momentAfter ?? end.subtract(const Duration(days: 30));
+    if (start.isAfter(end)) start = end.subtract(const Duration(days: 1));
+
+    setState(() => _animalsLoading = true);
+
+    try {
+      final list = await fetchAnimalsInSpan(
+        center: center,
+        radiusMeters: radiusMeters,
+        start: start,
+        end: end,
+      );
+
+      if (!mounted) return;
+      if (requestId != _animalRequestId) return;
+
+      setState(() {
+        _animals = list;
+        _animalsLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      if (requestId != _animalRequestId) return;
+      setState(() {
+        _animals = null;
+        _animalsLoading = false;
+      });
+    }
+  }
+
   Future<void> _loadMapState() async {
     final prefs = await SharedPreferences.getInstance();
     final lat = prefs.getDouble(_keyMapLat);
@@ -363,6 +434,7 @@ class _MapScreenState extends State<MapScreen> {
     _visibleKmDebounce?.cancel();
     _interactionsDebounce?.cancel();
     _detectionsDebounce?.cancel();
+    _animalsDebounce?.cancel();
     _interactionsPollTimer?.cancel();
     _saveMapState();
     _mapEventSub?.cancel();
@@ -522,6 +594,102 @@ class _MapScreenState extends State<MapScreen> {
         ? inBounds.take(_maxVisibleMarkersCap).toList()
         : inBounds;
     return toShow.map((d) => _buildDetectionMarker(d)).toList();
+  }
+
+  List<Marker> _animalMarkers() {
+    final list = _animals;
+    if (list == null || list.isEmpty) return [];
+    LatLngBounds bounds;
+    try {
+      bounds = _mapController.camera.visibleBounds;
+    } catch (_) {
+      return list.take(_maxVisibleMarkersCap).map((a) => _buildAnimalMarker(a)).toList();
+    }
+    final inBounds = list.whereType<Animal>().where((a) => pointInBounds(a.location, bounds)).toList();
+    final toShow = inBounds.length > _maxVisibleMarkersCap
+        ? inBounds.take(_maxVisibleMarkersCap).toList()
+        : inBounds;
+    return toShow.map((a) => _buildAnimalMarker(a)).toList();
+  }
+
+  Marker _buildAnimalMarker(Animal a) {
+    return Marker(
+      point: a.location,
+      width: 36,
+      height: 36,
+      child: GestureDetector(
+        onTap: () => _showAnimalDetail(a),
+        child: Material(
+          color: const Color(0xFF2E7D32),
+          shape: const CircleBorder(),
+          elevation: 2,
+          child: Center(
+            child: AnimalIcon(
+              speciesCommonName: a.displaySpecies,
+              size: 22,
+              fallback: Icon(Icons.pets, color: Colors.white, size: 22),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAnimalDetail(Animal a) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Material(
+                  color: const Color(0xFF2E7D32),
+                  shape: const CircleBorder(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: AnimalIcon(
+                      speciesCommonName: a.displaySpecies,
+                      size: 24,
+                      fallback: Icon(Icons.pets, color: Colors.white, size: 24),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    a.name,
+                    style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            if (a.displaySpecies != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                a.displaySpecies!,
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade800),
+              ),
+            ],
+            if (a.speciesCategory != null && a.speciesCategory!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                a.speciesCategory!,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Text(
+              'Locatie: ${a.location.latitude.toStringAsFixed(5)}, ${a.location.longitude.toStringAsFixed(5)}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   static const String _assetsPackage = 'wildlifenl_assets';
@@ -772,7 +940,8 @@ class _MapScreenState extends State<MapScreen> {
         momentBefore: _momentBefore,
         heatmapRoodVanaf: _heatmapRoodVanaf,
         heatmapCellSizeMeters: _heatmapCellSizeMeters,
-        onApply: (typeId, detectionType, after, before, {heatmapRoodVanaf, heatmapCellSizeMeters}) {
+        showAnimals: _showAnimals,
+        onApply: (typeId, detectionType, after, before, {heatmapRoodVanaf, heatmapCellSizeMeters, showAnimals}) {
           setState(() {
             _interactionTypeFilter = typeId;
             _detectionTypeFilter = detectionType;
@@ -780,11 +949,14 @@ class _MapScreenState extends State<MapScreen> {
             _momentBefore = before;
             _heatmapRoodVanaf = heatmapRoodVanaf;
             _heatmapCellSizeMeters = heatmapCellSizeMeters;
+            if (showAnimals != null) _showAnimals = showAnimals;
             _interactions = null;
             _detections = null;
+            _animals = null;
           });
           _loadInteractions();
           _loadDetections();
+          if (_showAnimals) _loadAnimals();
           _loadVisitation();
           Navigator.of(ctx).pop();
         },
@@ -840,7 +1012,13 @@ class _MapScreenState extends State<MapScreen> {
                 MarkerLayer(
                   markers: _interactionMarkers(),
                 ),
+                if (_showAnimals) MarkerLayer(markers: _animalMarkers()),
               ],
+            ),
+            Positioned(
+              top: 16,
+              right: 16,
+              child: _showLegend ? const MapLegend() : const SizedBox.shrink(),
             ),
             Positioned(
               left: 16,
@@ -877,11 +1055,17 @@ class _MapScreenState extends State<MapScreen> {
                     tooltip: 'Filters',
                   ),
                   const SizedBox(height: 8),
+                  IconButton.filled(
+                    onPressed: () => setState(() => _showLegend = !_showLegend),
+                    icon: Icon(_showLegend ? Icons.legend_toggle : Icons.info_outline),
+                    tooltip: _showLegend ? 'Legenda verbergen' : 'Legenda',
+                  ),
+                  const SizedBox(height: 8),
                   NorthUpButton(mapController: _mapController),
                 ],
               ),
             ),
-            if (_interactionsLoading || _detectionsLoading || _heatmapLoading)
+            if (_interactionsLoading || _detectionsLoading || _animalsLoading || _heatmapLoading)
               const Positioned(
                 top: 48,
                 left: 0,
