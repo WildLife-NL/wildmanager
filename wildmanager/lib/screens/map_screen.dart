@@ -1,5 +1,6 @@
-﻿import 'dart:async';
+import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -535,6 +536,7 @@ class _MapScreenState extends State<MapScreen> {
         width: size,
         height: size,
         fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => Icon(Icons.pets, color: Colors.white, size: size),
       );
     }
     return Icon(Icons.pets, color: Colors.white, size: size);
@@ -622,18 +624,31 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  bool _isSighting(Interaction i) {
+    return i.typeId == interactionTypeSighting ||
+        i.typeName.toLowerCase().contains('waarneming') ||
+        i.typeName.toLowerCase().contains('sighting');
+  }
+
   Widget _interactionIcon(Interaction i, {required double size}) {
-    if (i.typeId == interactionTypeSighting && i.speciesCommonName != null) {
-      final fullPath = getAnimalIconPath(i.speciesCommonName);
-      if (fullPath != null) {
-        final relativePath = fullPath.replaceFirst('packages/$_assetsPackage/', '');
-        return Image.asset(
-          relativePath,
-          package: _assetsPackage,
-          width: size,
-          height: size,
-          fit: BoxFit.contain,
-        );
+    if (_isSighting(i)) {
+      final name = i.speciesCommonName?.trim();
+      if (name != null && name.isNotEmpty) {
+        final fullPath = getAnimalIconPath(name);
+        if (fullPath != null) {
+          final relativePath = fullPath.replaceFirst('packages/$_assetsPackage/', '');
+          return Image.asset(
+            relativePath,
+            package: _assetsPackage,
+            width: size,
+            height: size,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Icon(iconForInteractionType(i.typeId), color: Colors.white, size: size),
+          );
+        }
+        if (kDebugMode) debugPrint('[Interactions] Waarneming soort "$name" heeft geen icoon in assets');
+      } else if (kDebugMode) {
+        debugPrint('[Interactions] Waarneming zonder soort: typeId=${i.typeId}, typeName=${i.typeName}');
       }
     }
     return Icon(iconForInteractionType(i.typeId), color: Colors.white, size: size);

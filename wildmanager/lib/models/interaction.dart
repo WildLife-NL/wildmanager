@@ -51,19 +51,28 @@ class Interaction {
 
       String? speciesCommonName;
       String? speciesCategory;
+
+      String? fromSpecies(Map<String, dynamic>? s) {
+        if (s == null) return null;
+        return s['commonName'] as String? ?? s['common_name'] as String? ?? s['name'] as String? ?? s['commonNameNL'] as String?;
+      }
+
       final sighting = json['reportOfSighting'] as Map<String, dynamic>? ?? json['report_of_sighting'] as Map<String, dynamic>?;
       if (sighting != null) {
         final involved = sighting['involvedAnimals'] as List<dynamic>? ?? sighting['involved_animals'] as List<dynamic>?;
         final first = involved?.isNotEmpty == true ? involved!.first as Map<String, dynamic>? : null;
         final species = first?['species'] ?? sighting['species'] as Map<String, dynamic>?;
         if (species != null) {
-          speciesCommonName = species['commonName'] as String? ?? species['common_name'] as String? ?? species['name'] as String?;
+          speciesCommonName = fromSpecies(species);
           speciesCategory = species['category'] as String? ?? species['speciesCategory'] as String?;
         }
+        speciesCommonName ??= first?['speciesCommonName'] as String? ?? first?['species_common_name'] as String? ?? first?['commonName'] as String?;
       }
-      // Top-level fallback als de API species direct op de interaction zet
+      // Top-level: API zet species soms direct op de interaction
       speciesCommonName ??= json['speciesCommonName'] as String? ?? json['species_common_name'] as String?;
-      speciesCategory ??= json['speciesCategory'] as String? ?? json['species_category'] as String?;
+      final topSpecies = json['species'] as Map<String, dynamic>?;
+      speciesCommonName ??= fromSpecies(topSpecies);
+      speciesCategory ??= json['speciesCategory'] as String? ?? json['species_category'] as String? ?? (topSpecies != null ? topSpecies['category'] as String? : null);
 
       return Interaction(
         id: id,
