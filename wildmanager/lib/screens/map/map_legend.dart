@@ -5,7 +5,6 @@ import '../../models/interaction.dart';
 
 import 'interaction_theme.dart' as theme;
 
-/// Kleuren voor de legenda (zelfde als op de kaart).
 class MapLegend extends StatelessWidget {
   const MapLegend({super.key});
 

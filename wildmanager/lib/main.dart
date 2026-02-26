@@ -8,6 +8,7 @@ import 'config/app_config.dart';
 import 'config/auth_roles.dart';
 import 'screens/login_screen.dart';
 import 'screens/map_screen.dart';
+import 'state/map_filter_notifier.dart';
 
 const _bearerTokenKey = 'bearer_token';
 const _scopesKey = 'scopes';
@@ -40,6 +41,7 @@ class MainApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<LoginInterface>.value(value: loginService),
+        ChangeNotifierProvider(create: (_) => MapFilterNotifier()),
       ],
       child: MaterialApp(
         title: AppConfig.appName,

@@ -53,7 +53,7 @@ bool pointInBounds(LatLng point, LatLngBounds bounds) {
 
 const double _wgs84RadiusM = 6378137.0;
 
-double heatmapCircleRadiusMeters(double cellSize) => (cellSize / 2) * 0.85;
+double heatmapCircleRadiusMeters(double cellSize) => (cellSize / 2) * 0.8;
 
 List<LatLng> squareCornersFromCenter(LatLng center, double halfSideMeters) {
   final latRad = center.latitude * math.pi / 180;

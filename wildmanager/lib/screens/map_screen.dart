@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wildlifenl_map_logic_components/wildlifenl_map_logic_components.dart';
 
@@ -19,9 +21,11 @@ import 'package:wildlifenl_animal_components/wildlifenl_animal_components.dart';
 import 'package:wildlifenl_assets/wildlifenl_assets.dart';
 import 'package:wildlifenl_detection_components/wildlifenl_detection_components.dart';
 import 'package:wildlifenl_visitation_components/wildlifenl_visitation_components.dart';
-import 'map/interaction_filter_sheet.dart';
+import '../state/filter_state.dart';
+import '../state/map_filter_notifier.dart';
+import 'map/filter_content.dart';
+import 'map/filter_panel_controller.dart';
 import 'map/interaction_theme.dart';
-import 'map/interactions_info.dart';
 import 'map/map_legend.dart';
 import 'map/map_math.dart';
 import 'map/north_up_button.dart';
@@ -38,6 +42,7 @@ const _visibleKmDebounceMs = 250;
 const double _maxZoomOutKm = 200;
 const double _minVisibleWidthM = 50;
 const int _maxVisibleMarkersCap = 1200;
+const double _filterPanelWidth = 400;
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -76,7 +81,6 @@ class _MapScreenState extends State<MapScreen> {
   int _animalRequestId = 0;
   Timer? _animalsDebounce;
 
-  int? _lastFetchRadiusMeters;
   LatLng? _lastFetchedCenter;
   double? _lastFetchedVisibleKm;
 
@@ -84,36 +88,50 @@ class _MapScreenState extends State<MapScreen> {
   Timer? _interactionsPollTimer;
   Timer? _visibleKmDebounce;
 
-  int? _interactionTypeFilter;
-  DetectionType? _detectionTypeFilter;
-  DateTime? _momentAfter;
-  DateTime? _momentBefore;
-  int? _heatmapRoodVanaf;
-  double? _heatmapCellSizeMeters;
-  bool _showAnimals = true;
+  MapFilterNotifier? _filterNotifier;
+  late final FilterPanelController _filterPanelController;
+  late final ScrollController _panelScrollController;
+  bool _showLegend = true;
 
-  bool _showLegend = false;
+  String _versionLabel = '';
 
   int _interactionRequestId = 0;
 
-  bool _interactionInDateRange(Interaction i) {
-    if (_momentAfter == null && _momentBefore == null) return true;
+  static bool _interactionInDateRange(Interaction i, FilterState fs) {
+    if (fs.momentAfter == null && fs.momentBefore == null) return true;
     final m = i.moment?.toLocal();
     if (m == null) return false;
-    final afterStart = _momentAfter != null
-        ? DateTime(_momentAfter!.year, _momentAfter!.month, _momentAfter!.day)
+    final afterStart = fs.momentAfter != null
+        ? DateTime(fs.momentAfter!.year, fs.momentAfter!.month, fs.momentAfter!.day)
         : null;
-    final beforeEnd = _momentBefore != null
-        ? DateTime(_momentBefore!.year, _momentBefore!.month, _momentBefore!.day, 23, 59, 59, 999)
+    final beforeEnd = fs.momentBefore != null
+        ? DateTime(fs.momentBefore!.year, fs.momentBefore!.month, fs.momentBefore!.day, 23, 59, 59, 999)
         : null;
     if (afterStart != null && m.isBefore(afterStart)) return false;
     if (beforeEnd != null && m.isAfter(beforeEnd)) return false;
     return true;
   }
 
+  void _onFilterChanged() {
+    if (!mounted || _filterNotifier == null) return;
+    setState(() {
+      _interactions = null;
+      _detections = null;
+      _animals = null;
+    });
+    _loadInteractions();
+    _loadDetections();
+    _loadVisitation();
+    if (_filterNotifier!.state.showAnimals) _scheduleLoadAnimals();
+  }
+
   @override
   void initState() {
     super.initState();
+    _filterNotifier = context.read<MapFilterNotifier>();
+    _filterNotifier!.addListener(_onFilterChanged);
+    _filterPanelController = FilterPanelController();
+    _panelScrollController = ScrollController();
     _loadMapState().then((_) {
       _mapEventSub = _mapController.mapEventStream.listen((_) {
         _visibleKmDebounce?.cancel();
@@ -142,6 +160,11 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     _loadLivingLabs();
+    PackageInfo.fromPlatform().then((info) {
+      if (!mounted) return;
+      final build = info.buildNumber.isNotEmpty ? info.buildNumber : 'dev';
+      setState(() => _versionLabel = 'v${info.version} ($build)');
+    });
   }
 
   void _checkMapMovedAndReload() {
@@ -169,7 +192,7 @@ class _MapScreenState extends State<MapScreen> {
     if (centerMoved || zoomChanged) {
       _scheduleLoadInteractions();
       _scheduleLoadDetections();
-      if (_showAnimals) _scheduleLoadAnimals();
+      if (_filterNotifier?.state.showAnimals ?? true) _scheduleLoadAnimals();
     }
   }
 
@@ -218,17 +241,18 @@ class _MapScreenState extends State<MapScreen> {
     final requestId = ++_interactionRequestId;
 
     setState(() => _interactionsLoading = true);
+    final fs = _filterNotifier!.state;
 
     try {
-      final before = _momentBefore != null
-          ? DateTime(_momentBefore!.year, _momentBefore!.month, _momentBefore!.day, 23, 59, 59, 999)
+      final before = fs.momentBefore != null
+          ? DateTime(fs.momentBefore!.year, fs.momentBefore!.month, fs.momentBefore!.day, 23, 59, 59, 999)
           : null;
       final list = await fetchInteractions(
         center: requestedCenter,
         radiusMeters: radiusMeters,
-        momentAfter: _momentAfter,
+        momentAfter: fs.momentAfter,
         momentBefore: before,
-        interactionTypeId: _interactionTypeFilter,
+        interactionTypeId: null,
       );
 
       if (!mounted) return;
@@ -241,10 +265,12 @@ class _MapScreenState extends State<MapScreen> {
         return;
       }
 
-      final listInRange = list.where(_interactionInDateRange).toList();
+      final listInRange = list
+          .where((i) => _interactionInDateRange(i, fs) && fs.interactionTypeMatches(i.typeId))
+          .toList();
       final merged = <String, Interaction>{};
       for (final i in _interactions ?? <Interaction>[]) {
-        if (_interactionInDateRange(i)) merged[i.id] = i;
+        if (_interactionInDateRange(i, fs) && fs.interactionTypeMatches(i.typeId)) merged[i.id] = i;
       }
       for (final i in listInRange) {
         merged[i.id] = i;
@@ -257,19 +283,17 @@ class _MapScreenState extends State<MapScreen> {
       setState(() {
         _interactions = mergedList;
         _interactionsLoading = false;
-        _lastFetchRadiusMeters = radiusMeters;
         _lastFetchedCenter = requestedCenter;
         _lastFetchedVisibleKm = visibleWidthKmFromBounds(nowBounds);
       });
       _scheduleLoadDetections();
-      if (_showAnimals) _scheduleLoadAnimals();
+      if (fs.showAnimals) _scheduleLoadAnimals();
     } catch (_) {
       if (!mounted) return;
       if (requestId != _interactionRequestId) return;
       setState(() {
         _interactions = null;
         _interactionsLoading = false;
-        _lastFetchRadiusMeters = null;
       });
     }
   }
@@ -290,10 +314,11 @@ class _MapScreenState extends State<MapScreen> {
     final radiusMeters = computeRadiusMetersForBounds(center, bounds);
     final requestId = ++_detectionRequestId;
 
-    var end = _momentBefore != null
-        ? DateTime(_momentBefore!.year, _momentBefore!.month, _momentBefore!.day, 23, 59, 59, 999)
+    final fs = _filterNotifier!.state;
+    var end = fs.momentBefore != null
+        ? DateTime(fs.momentBefore!.year, fs.momentBefore!.month, fs.momentBefore!.day, 23, 59, 59, 999)
         : DateTime.now();
-    var start = _momentAfter ?? end.subtract(const Duration(days: 30));
+    var start = fs.momentAfter ?? end.subtract(const Duration(days: 30));
     if (start.isAfter(end)) start = end.subtract(const Duration(days: 1));
 
     setState(() => _detectionsLoading = true);
@@ -305,7 +330,7 @@ class _MapScreenState extends State<MapScreen> {
         radiusMeters: radiusMeters,
         start: start,
         end: end,
-        typeFilter: _detectionTypeFilter,
+        typeFilter: null,
       );
 
       if (!mounted) return;
@@ -344,10 +369,11 @@ class _MapScreenState extends State<MapScreen> {
     final radiusMeters = computeRadiusMetersForBounds(center, bounds);
     final requestId = ++_animalRequestId;
 
-    var end = _momentBefore != null
-        ? DateTime(_momentBefore!.year, _momentBefore!.month, _momentBefore!.day, 23, 59, 59, 999)
+    final fs = _filterNotifier!.state;
+    var end = fs.momentBefore != null
+        ? DateTime(fs.momentBefore!.year, fs.momentBefore!.month, fs.momentBefore!.day, 23, 59, 59, 999)
         : DateTime.now();
-    var start = _momentAfter ?? end.subtract(const Duration(days: 30));
+    var start = fs.momentAfter ?? end.subtract(const Duration(days: 30));
     if (start.isAfter(end)) start = end.subtract(const Duration(days: 1));
 
     setState(() => _animalsLoading = true);
@@ -430,6 +456,8 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
+    _filterNotifier?.removeListener(_onFilterChanged);
+    _panelScrollController.dispose();
     _saveMapStateDebounce?.cancel();
     _visibleKmDebounce?.cancel();
     _interactionsDebounce?.cancel();
@@ -464,12 +492,13 @@ class _MapScreenState extends State<MapScreen> {
       return;
     }
     setState(() => _heatmapLoading = true);
+    final fs = _filterNotifier?.state ?? FilterState.defaults;
     try {
-      final cellSize = _heatmapCellSizeMeters ?? defaultVisitationCellSize;
+      final cellSize = fs.heatmapCellSizeMeters ?? defaultVisitationCellSize;
       final cells = await fetchVisitationForLivingLabs(
         labs,
         cellSize: cellSize,
-        maxCount: _heatmapRoodVanaf,
+        maxCount: fs.heatmapRoodVanaf,
       );
       if (!mounted) return;
       setState(() {
@@ -492,18 +521,17 @@ class _MapScreenState extends State<MapScreen> {
     final withCount = cells.where((c) => c.count > 0).toList();
     if (withCount.isEmpty) return [];
 
-    final cellSize = _heatmapCellSizeMeters ?? defaultVisitationCellSize;
+    final fs = _filterNotifier?.state ?? FilterState.defaults;
+    final cellSize = fs.heatmapCellSizeMeters ?? defaultVisitationCellSize;
     final radiusMeters = heatmapCircleRadiusMeters(cellSize);
 
     final circles = withCount.map((c) {
       final intensity = c.intensity.clamp(0.0, 1.0);
-
       final color = Color.lerp(
         const Color(0xFF2E7D32),
         const Color(0xFFC62828),
         intensity,
       )!.withValues(alpha: 0.35 + 0.5 * intensity);
-
       return CircleMarker(
         point: LatLng(c.latitude, c.longitude),
         radius: radiusMeters,
@@ -555,41 +583,52 @@ class _MapScreenState extends State<MapScreen> {
   List<Marker> _interactionMarkers() {
     final list = _interactions;
     if (list == null || list.isEmpty) return [];
+    final fs = _filterNotifier?.state ?? FilterState.defaults;
+    final filtered = list
+        .where((i) => _interactionInDateRange(i, fs) && fs.interactionTypeMatches(i.typeId))
+        .toList();
     LatLngBounds bounds;
     try {
       bounds = _mapController.camera.visibleBounds;
     } catch (_) {
-      return list.take(_maxVisibleMarkersCap).map((i) => _buildInteractionMarker(i)).toList();
+      return filtered.take(_maxVisibleMarkersCap).map((i) => _buildInteractionMarker(i)).toList();
     }
-    final inBounds = list.where((i) => pointInBounds(i.location, bounds)).toList();
+    final inBounds = filtered.where((i) => pointInBounds(i.location, bounds)).toList();
     final toShow = inBounds.length > _maxVisibleMarkersCap
         ? inBounds.take(_maxVisibleMarkersCap).toList()
         : inBounds;
     return toShow.map((i) => _buildInteractionMarker(i)).toList();
   }
 
-  int _getVisibleMarkerCount() {
-    final list = _interactions;
-    if (list == null || list.isEmpty) return 0;
-    try {
-      final bounds = _mapController.camera.visibleBounds;
-      final count = list.where((i) => pointInBounds(i.location, bounds)).length;
-      return count > _maxVisibleMarkersCap ? _maxVisibleMarkersCap : count;
-    } catch (_) {
-      return list.length > _maxVisibleMarkersCap ? _maxVisibleMarkersCap : list.length;
-    }
+  bool _detectionInDateRange(Detection d, FilterState fs) {
+    if (fs.momentAfter == null && fs.momentBefore == null) return true;
+    final m = d.moment?.toLocal();
+    if (m == null) return false;
+    final afterStart = fs.momentAfter != null
+        ? DateTime(fs.momentAfter!.year, fs.momentAfter!.month, fs.momentAfter!.day)
+        : null;
+    final beforeEnd = fs.momentBefore != null
+        ? DateTime(fs.momentBefore!.year, fs.momentBefore!.month, fs.momentBefore!.day, 23, 59, 59, 999)
+        : null;
+    if (afterStart != null && m.isBefore(afterStart)) return false;
+    if (beforeEnd != null && m.isAfter(beforeEnd)) return false;
+    return true;
   }
 
   List<Marker> _detectionMarkers() {
     final list = _detections;
     if (list == null || list.isEmpty) return [];
+    final fs = _filterNotifier?.state ?? FilterState.defaults;
+    final filtered = list
+        .where((d) => fs.detectionTypeMatches(d.type) && _detectionInDateRange(d, fs))
+        .toList();
     LatLngBounds bounds;
     try {
       bounds = _mapController.camera.visibleBounds;
     } catch (_) {
-      return list.take(_maxVisibleMarkersCap).map((d) => _buildDetectionMarker(d)).toList();
+      return filtered.take(_maxVisibleMarkersCap).map((d) => _buildDetectionMarker(d)).toList();
     }
-    final inBounds = list.where((d) => pointInBounds(d.location, bounds)).toList();
+    final inBounds = filtered.where((d) => pointInBounds(d.location, bounds)).toList();
     final toShow = inBounds.length > _maxVisibleMarkersCap
         ? inBounds.take(_maxVisibleMarkersCap).toList()
         : inBounds;
@@ -930,40 +969,6 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  void _openInteractionFilters() {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (ctx) => InteractionFilterSheet(
-        typeFilter: _interactionTypeFilter,
-        detectionTypeFilter: _detectionTypeFilter,
-        momentAfter: _momentAfter,
-        momentBefore: _momentBefore,
-        heatmapRoodVanaf: _heatmapRoodVanaf,
-        heatmapCellSizeMeters: _heatmapCellSizeMeters,
-        showAnimals: _showAnimals,
-        onApply: (typeId, detectionType, after, before, {heatmapRoodVanaf, heatmapCellSizeMeters, showAnimals}) {
-          setState(() {
-            _interactionTypeFilter = typeId;
-            _detectionTypeFilter = detectionType;
-            _momentAfter = after;
-            _momentBefore = before;
-            _heatmapRoodVanaf = heatmapRoodVanaf;
-            _heatmapCellSizeMeters = heatmapCellSizeMeters;
-            if (showAnimals != null) _showAnimals = showAnimals;
-            _interactions = null;
-            _detections = null;
-            _animals = null;
-          });
-          _loadInteractions();
-          _loadDetections();
-          if (_showAnimals) _loadAnimals();
-          _loadVisitation();
-          Navigator.of(ctx).pop();
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (!_mapStateLoaded) {
@@ -1006,14 +1011,35 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ),
               extraLayers: [
-                if (_livingLabs != null) ..._livingLabPolygonLayers(),
-                if (_livingLabs != null) ..._heatmapLayers(),
+                if (_filterNotifier?.state.showLivingLab ?? true)
+                  if (_livingLabs != null) ..._livingLabPolygonLayers(),
+                if (_filterNotifier?.state.showHeatmap ?? true)
+                  if (_livingLabs != null) ..._heatmapLayers(),
                 MarkerLayer(markers: _detectionMarkers()),
-                MarkerLayer(
-                  markers: _interactionMarkers(),
-                ),
-                if (_showAnimals) MarkerLayer(markers: _animalMarkers()),
+                MarkerLayer(markers: _interactionMarkers()),
+                if (_filterNotifier?.state.showAnimals ?? true)
+                  MarkerLayer(markers: _animalMarkers()),
               ],
+            ),
+            Positioned(
+              top: 16,
+              left: 16,
+              child: _versionLabel.isEmpty
+                  ? const SizedBox.shrink()
+                  : Material(
+                      borderRadius: BorderRadius.circular(6),
+                      color: Colors.black.withValues(alpha: 0.5),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Text(
+                          _versionLabel,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ),
             ),
             Positioned(
               top: 16,
@@ -1028,17 +1054,6 @@ class _MapScreenState extends State<MapScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ScaleBarIndicator(mapController: _mapController),
-                  if (_lastFetchRadiusMeters != null && _interactions != null) ...[
-                    const SizedBox(height: 8),
-                    InteractionsInfo(
-                      count: _interactions!.length,
-                      visibleCount: _getVisibleMarkerCount(),
-                      radiusMeters: _lastFetchRadiusMeters!,
-                      visibleKm: _visibleKm,
-                      onRefresh: _loadInteractions,
-                      isLoading: _interactionsLoading,
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -1049,10 +1064,19 @@ class _MapScreenState extends State<MapScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  IconButton.filled(
-                    onPressed: _openInteractionFilters,
-                    icon: const Icon(Icons.filter_list),
-                    tooltip: 'Filters',
+                  Consumer<MapFilterNotifier>(
+                    builder: (context, notifier, _) {
+                      final count = notifier.state.activeFilterCount;
+                      return Badge(
+                        isLabelVisible: count > 0,
+                        label: Text('$count'),
+                        child: IconButton.filled(
+                          onPressed: () => _filterPanelController.toggle(),
+                          icon: const Icon(Icons.filter_list),
+                          tooltip: 'Filters',
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 8),
                   IconButton.filled(
@@ -1078,9 +1102,52 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                 ),
               ),
+            _buildFilterSidePanel(),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFilterSidePanel() {
+    return ListenableBuilder(
+      listenable: _filterPanelController,
+      builder: (_, __) {
+        final open = _filterPanelController.isOpen;
+        return TweenAnimationBuilder<double>(
+          key: ValueKey(open),
+          duration: open
+              ? const Duration(milliseconds: 200)
+              : Duration.zero,
+          curve: Curves.easeInOut,
+          tween: Tween(begin: open ? 0 : 0, end: open ? 1 : 0),
+          builder: (context, value, child) {
+            return Positioned(
+              right: -(1 - value) * _filterPanelWidth,
+              top: 0,
+              bottom: 0,
+              width: _filterPanelWidth,
+              child: child!,
+            );
+          },
+          child: Material(
+            elevation: 8,
+            color: Theme.of(context).colorScheme.surface,
+            child: Consumer<MapFilterNotifier>(
+              builder: (context, notifier, _) {
+                return FilterContent(
+                  scrollController: _panelScrollController,
+                  initialDraft: notifier.state,
+                  onApply: (draft) {
+                    notifier.apply(draft);
+                    _filterPanelController.closePanel();
+                  },
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 }
