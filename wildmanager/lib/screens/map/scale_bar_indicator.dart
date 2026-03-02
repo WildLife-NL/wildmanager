@@ -19,6 +19,7 @@ class _ScaleBarIndicatorState extends State<ScaleBarIndicator> {
   static const List<int> _allowedMeters = [
     50000, 20000, 10000, 9000, 8000, 7000, 6000, 5000, 4500, 4000, 3500,
     3000, 2500, 2000, 1500, 1000, 750, 500, 400, 300, 250, 200, 150, 100, 75, 50,
+    40, 30, 25, 20, 15, 10, 5,
   ];
 
   double _barPx = 90;
@@ -88,9 +89,9 @@ class _ScaleBarIndicatorState extends State<ScaleBarIndicator> {
       chosenM = lastM;
       chosenPx = math.max(minPx, lastM / mpp);
     } else if (chosenPx > maxPx) {
-      final firstM = _allowedMeters.first;
-      chosenM = firstM;
-      chosenPx = math.min(maxPx, firstM / mpp);
+      final lastM = _allowedMeters.last;
+      chosenM = lastM;
+      chosenPx = math.min(maxPx, lastM / mpp);
     }
 
     final label = chosenM >= 1000 ? '${chosenM ~/ 1000} km' : '${chosenM} m';

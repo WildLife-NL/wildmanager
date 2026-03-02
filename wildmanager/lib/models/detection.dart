@@ -36,7 +36,7 @@ class Detection {
     } else if (speciesObj is String) {
       species = speciesObj;
     }
-    if (species == null) species = json['animal_species'] as String?;
+    species ??= json['animal_species'] as String?;
 
     return Detection(
       id: id,

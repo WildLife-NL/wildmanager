@@ -743,7 +743,12 @@ class _MapScreenState extends State<MapScreen> {
         width: size,
         height: size,
         fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => Icon(Icons.pets, color: Colors.white, size: size),
+        errorBuilder: (_, __, ___) {
+          if (kDebugMode) {
+            debugPrint('[Detection icoon] Laden mislukt: $relativePath (soort: $species)');
+          }
+          return Icon(Icons.pets, color: Colors.white, size: size);
+        },
       );
     }
     return Icon(Icons.pets, color: Colors.white, size: size);
@@ -850,7 +855,12 @@ class _MapScreenState extends State<MapScreen> {
             width: size,
             height: size,
             fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => Icon(iconForInteractionType(i.typeId), color: Colors.white, size: size),
+            errorBuilder: (_, __, ___) {
+              if (kDebugMode) {
+                debugPrint('[Waarneming icoon] Laden mislukt: $relativePath (soort: $name)');
+              }
+              return Icon(iconForInteractionType(i.typeId), color: Colors.white, size: size);
+            },
           );
         }
         if (kDebugMode) debugPrint('[Interactions] Waarneming soort "$name" heeft geen icoon in assets');
@@ -1020,6 +1030,22 @@ class _MapScreenState extends State<MapScreen> {
                 if (_filterNotifier?.state.showAnimals ?? true)
                   MarkerLayer(markers: _animalMarkers()),
               ],
+            ),
+            ListenableBuilder(
+              listenable: _filterPanelController,
+              builder: (_, __) {
+                if (!_filterPanelController.isOpen) return const SizedBox.shrink();
+                return Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  right: _filterPanelWidth,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: () => _filterPanelController.closePanel(),
+                  ),
+                );
+              },
             ),
             Positioned(
               top: 16,

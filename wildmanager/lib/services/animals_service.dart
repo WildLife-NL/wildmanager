@@ -7,7 +7,6 @@ import '../config/app_config.dart';
 const int _minRadiusMeters = 1;
 const int _maxRadiusMeters = 10000;
 
-/// Haalt dieren op binnen het gegeven tijd-ruimtebereik (spatiotemporal span).
 Future<List<Animal>> fetchAnimalsInSpan({
   required LatLng center,
   required int radiusMeters,
