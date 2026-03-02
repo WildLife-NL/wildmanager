@@ -1,9 +1,11 @@
 {
   "version": 2,
-  "installCommand": "chmod +x vercel-install.sh && ./vercel-install.sh",
-  "buildCommand": "./flutter/bin/flutter pub get && ./flutter/bin/flutter build web --release",
+  "installCommand": "sh vercel-install.sh",
+  "buildCommand": "sh vercel-build.sh",
   "outputDirectory": "build/web",
   "routes": [
+    { "src": "/(.*\\..*)", "dest": "/$1" },
+    { "src": "/assets/(.*)", "dest": "/assets/$1" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
