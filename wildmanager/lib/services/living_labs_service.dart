@@ -8,7 +8,6 @@ import '../models/living_lab.dart';
 
 const _bearerTokenKey = 'bearer_token';
 
-/// Fetches all living labs from the API. Requires stored bearer token.
 Future<List<LivingLab>> fetchLivingLabs() async {
   final prefs = await SharedPreferences.getInstance();
   final token = prefs.getString(_bearerTokenKey);

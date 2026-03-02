@@ -8,6 +8,7 @@ import 'config/app_config.dart';
 import 'config/auth_roles.dart';
 import 'screens/login_screen.dart';
 import 'screens/map_screen.dart';
+import 'state/map_filter_notifier.dart';
 
 const _bearerTokenKey = 'bearer_token';
 const _scopesKey = 'scopes';
@@ -40,6 +41,7 @@ class MainApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<LoginInterface>.value(value: loginService),
+        ChangeNotifierProvider(create: (_) => MapFilterNotifier()),
       ],
       child: MaterialApp(
         title: AppConfig.appName,
@@ -51,7 +53,6 @@ class MainApp extends StatelessWidget {
   }
 }
 
-/// Toont eerst laadstatus, daarna hoofdscherm of navigeert naar apart loginscherm.
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
@@ -87,7 +88,7 @@ class _AuthGateState extends State<AuthGate> {
       );
     }
     if (_hasToken) {
-      return const HomeScreen();
+      return const MapScreen();
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -116,7 +117,7 @@ class _AuthGateState extends State<AuthGate> {
               }
               if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
+                MaterialPageRoute<void>(builder: (_) => const MapScreen()),
                 (_) => false,
               );
             },
@@ -155,7 +156,6 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-/// Beperkt breedte op desktop en centreert de inhoud voor betere schaling.
 class _DesktopFriendlyLayout extends StatelessWidget {
   const _DesktopFriendlyLayout({required this.child});
 
