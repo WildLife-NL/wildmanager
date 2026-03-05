@@ -4,7 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 const double zoomScaleOffset = 0.65;
-const int apiMaxRadiusMeters = 10000;
+const int apiMaxRadiusMeters = 50000;
 const double fetchPaddingFactor = 1.08;
 
 double visibleWidthKmFromBounds(LatLngBounds bounds) {
