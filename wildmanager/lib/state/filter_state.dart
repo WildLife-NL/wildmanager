@@ -61,7 +61,7 @@ class FilterState {
       detectieVisueel || detectieAkoestisch || detectieChemisch || detectieOverig;
 
   bool interactionTypeMatches(int typeId) {
-    if (!hasAnyInteractionTypeSelected) return true;
+    if (!hasAnyInteractionTypeSelected) return false;
     switch (typeId) {
       case interactionTypeSighting:
         return waarneming;

@@ -5,7 +5,7 @@ import 'package:wildlifenl_animal_components/wildlifenl_animal_components.dart';
 import '../config/app_config.dart';
 
 const int _minRadiusMeters = 1;
-const int _maxRadiusMeters = 10000;
+const int _maxRadiusMeters = 50000;
 
 Future<List<Animal>> fetchAnimalsInSpan({
   required LatLng center,

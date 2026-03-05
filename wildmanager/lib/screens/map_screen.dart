@@ -122,7 +122,7 @@ class _MapScreenState extends State<MapScreen> {
     _loadInteractions();
     _loadDetections();
     _loadVisitation();
-    if (_filterNotifier!.state.showAnimals) _scheduleLoadAnimals();
+    if (_showAnimalsLayer) _scheduleLoadAnimals();
   }
 
   @override
@@ -141,6 +141,7 @@ class _MapScreenState extends State<MapScreen> {
         );
         _scheduleSaveMapState();
         _scheduleLoadInteractions();
+        _scheduleLoadDetections();
       });
 
       if (mounted) {
@@ -149,6 +150,8 @@ class _MapScreenState extends State<MapScreen> {
           Future.delayed(const Duration(milliseconds: 350), () {
             if (!mounted) return;
             _loadInteractions();
+            _scheduleLoadDetections();
+            if (_showAnimalsLayer) _scheduleLoadAnimals();
           });
         });
 
@@ -163,7 +166,9 @@ class _MapScreenState extends State<MapScreen> {
     PackageInfo.fromPlatform().then((info) {
       if (!mounted) return;
       final build = info.buildNumber.isNotEmpty ? info.buildNumber : 'dev';
-      setState(() => _versionLabel = 'v${info.version} ($build)');
+      // Bij datum-versioning (YYYYMMDD) tonen we v20260305 voor onderzoekers.
+      final isDateVersion = build.length == 8 && int.tryParse(build) != null;
+      setState(() => _versionLabel = isDateVersion ? 'v$build' : 'v${info.version} ($build)');
     });
   }
 
@@ -182,6 +187,8 @@ class _MapScreenState extends State<MapScreen> {
 
     if (_lastFetchedCenter == null || _lastFetchedVisibleKm == null) {
       _scheduleLoadInteractions();
+      _scheduleLoadDetections();
+      if (_showAnimalsLayer) _scheduleLoadAnimals();
       return;
     }
 
@@ -192,7 +199,7 @@ class _MapScreenState extends State<MapScreen> {
     if (centerMoved || zoomChanged) {
       _scheduleLoadInteractions();
       _scheduleLoadDetections();
-      if (_filterNotifier?.state.showAnimals ?? true) _scheduleLoadAnimals();
+      if (_showAnimalsLayer) _scheduleLoadAnimals();
     }
   }
 
@@ -275,10 +282,7 @@ class _MapScreenState extends State<MapScreen> {
       for (final i in listInRange) {
         merged[i.id] = i;
       }
-      var mergedList = merged.values.toList();
-      if (mergedList.length > 2000) {
-        mergedList = mergedList.take(2000).toList();
-      }
+      final mergedList = merged.values.toList();
 
       setState(() {
         _interactions = mergedList;
@@ -287,7 +291,7 @@ class _MapScreenState extends State<MapScreen> {
         _lastFetchedVisibleKm = visibleWidthKmFromBounds(nowBounds);
       });
       _scheduleLoadDetections();
-      if (fs.showAnimals) _scheduleLoadAnimals();
+      if (_showAnimalsLayer) _scheduleLoadAnimals();
     } catch (_) {
       if (!mounted) return;
       if (requestId != _interactionRequestId) return;
@@ -580,6 +584,15 @@ class _MapScreenState extends State<MapScreen> {
     ];
   }
 
+  /// Dierenlaag tonen alleen als "Toon dieren" aan staat én we niet in de modus
+  /// "alleen detecties" zitten (anders zouden naast detecties ook dieren zichtbaar zijn).
+  bool get _showAnimalsLayer {
+    final fs = _filterNotifier?.state ?? FilterState.defaults;
+    if (!(fs.showAnimals)) return false;
+    final onlyDetections = fs.detectie && !fs.hasAnyInteractionTypeSelected;
+    return !onlyDetections;
+  }
+
   List<Marker> _interactionMarkers() {
     final list = _interactions;
     if (list == null || list.isEmpty) return [];
@@ -677,56 +690,90 @@ class _MapScreenState extends State<MapScreen> {
   void _showAnimalDetail(Animal a) {
     showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Material(
-                  color: const Color(0xFF2E7D32),
-                  shape: const CircleBorder(),
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: AnimalIcon(
-                      speciesCommonName: a.displaySpecies,
-                      size: 24,
-                      fallback: Icon(Icons.pets, color: Colors.white, size: 24),
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.4,
+        minChildSize: 0.25,
+        maxChildSize: 0.7,
+        expand: false,
+        builder: (ctx, scrollController) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: ListView(
+            controller: scrollController,
+            children: [
+              Row(
+                children: [
+                  Material(
+                    color: const Color(0xFF2E7D32),
+                    shape: const CircleBorder(),
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: AnimalIcon(
+                        speciesCommonName: a.displaySpecies,
+                        size: 24,
+                        fallback: Icon(Icons.pets, color: Colors.white, size: 24),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    a.name,
-                    style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      a.name,
+                      style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _detailRow(ctx, Icons.tag, 'ID', a.id),
+              _detailRow(ctx, Icons.label, 'Naam', a.name),
+              if (a.speciesCommonName != null && a.speciesCommonName!.isNotEmpty)
+                _detailRow(ctx, Icons.pets, 'Soort (common name)', a.speciesCommonName!),
+              if (a.speciesLatinName != null && a.speciesLatinName!.isNotEmpty)
+                _detailRow(ctx, Icons.science, 'Soort (wetenschappelijke naam)', a.speciesLatinName!),
+              if (a.speciesCategory != null && a.speciesCategory!.isNotEmpty)
+                _detailRow(ctx, Icons.category, 'Categorie', a.speciesCategory!),
+              if (a.locationTimestamp != null)
+                _detailRow(ctx, Icons.schedule, 'Tijdstip locatie', formatMoment(a.locationTimestamp!)),
+              const SizedBox(height: 12),
+              _detailRow(
+                ctx,
+                Icons.location_on,
+                'Locatie',
+                '${a.location.latitude.toStringAsFixed(5)}, ${a.location.longitude.toStringAsFixed(5)}',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(BuildContext context, IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Colors.grey.shade600),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade800),
                 ),
               ],
             ),
-            if (a.displaySpecies != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                a.displaySpecies!,
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade800),
-              ),
-            ],
-            if (a.speciesCategory != null && a.speciesCategory!.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                a.speciesCategory!,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-              ),
-            ],
-            const SizedBox(height: 8),
-            Text(
-              'Locatie: ${a.location.latitude.toStringAsFixed(5)}, ${a.location.longitude.toStringAsFixed(5)}',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -776,48 +823,52 @@ class _MapScreenState extends State<MapScreen> {
   void _showDetectionDetail(Detection d) {
     showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Material(
-                  color: d.type.color,
-                  shape: const CircleBorder(),
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: _detectionIcon(d.species, size: 24),
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.4,
+        minChildSize: 0.25,
+        maxChildSize: 0.7,
+        expand: false,
+        builder: (ctx, scrollController) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: ListView(
+            controller: scrollController,
+            children: [
+              Row(
+                children: [
+                  Material(
+                    color: d.type.color,
+                    shape: const CircleBorder(),
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: _detectionIcon(d.species, size: 24),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _detectionTypeLabel(d.type),
-                    style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _detectionTypeLabel(d.type),
+                      style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            if (d.moment != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                formatMoment(d.moment!),
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _detailRow(ctx, Icons.tag, 'ID', d.id),
+              _detailRow(ctx, Icons.category, 'Type', _detectionTypeLabel(d.type)),
+              if (d.moment != null)
+                _detailRow(ctx, Icons.schedule, 'Tijdstip', formatMoment(d.moment!)),
+              if (d.species != null && d.species!.isNotEmpty)
+                _detailRow(ctx, Icons.pets, 'Soort', d.species!),
+              const SizedBox(height: 12),
+              _detailRow(
+                ctx,
+                Icons.location_on,
+                'Locatie',
+                '${d.location.latitude.toStringAsFixed(5)}, ${d.location.longitude.toStringAsFixed(5)}',
               ),
             ],
-            if (d.species != null && d.species!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(d.species!, style: TextStyle(fontSize: 14, color: Colors.grey.shade800)),
-            ],
-            const SizedBox(height: 8),
-            Text(
-              'Locatie: ${d.location.latitude.toStringAsFixed(5)}, ${d.location.longitude.toStringAsFixed(5)}',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -928,49 +979,31 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                 ],
               ),
-              if (interaction.moment != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  formatMoment(interaction.moment!),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade700,
-                  ),
+              const SizedBox(height: 16),
+              _detailRow(ctx, Icons.tag, 'ID', interaction.id),
+              _detailRow(ctx, Icons.category, 'Type', interaction.typeName),
+              _detailRow(ctx, Icons.numbers, 'Type-ID', '${interaction.typeId}'),
+              if (interaction.moment != null)
+                _detailRow(ctx, Icons.schedule, 'Tijdstip', formatMoment(interaction.moment!)),
+              if (interaction.description != null && interaction.description!.isNotEmpty)
+                _detailRow(ctx, Icons.description, 'Beschrijving', interaction.description!),
+              if (interaction.speciesCommonName != null && interaction.speciesCommonName!.isNotEmpty)
+                _detailRow(
+                  ctx,
+                  Icons.pets,
+                  'Soort',
+                  interaction.speciesCategory != null && interaction.speciesCategory!.isNotEmpty
+                      ? '${interaction.speciesCommonName} (${interaction.speciesCategory})'
+                      : interaction.speciesCommonName!,
                 ),
-              ],
-              if (interaction.description != null &&
-                  interaction.description!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(
-                  interaction.description!,
-                  style: const TextStyle(fontSize: 15),
-                ),
-              ],
-              if (interaction.speciesCommonName != null) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(Icons.pets, size: 20, color: Colors.grey.shade600),
-                    const SizedBox(width: 8),
-                    Text(
-                      interaction.speciesCategory != null
-                          ? '${interaction.speciesCommonName} (${interaction.speciesCategory})'
-                          : interaction.speciesCommonName!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade800,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              if (interaction.speciesCategory != null && interaction.speciesCategory!.isNotEmpty && (interaction.speciesCommonName == null || interaction.speciesCommonName!.isEmpty))
+                _detailRow(ctx, Icons.category, 'Categorie', interaction.speciesCategory!),
               const SizedBox(height: 12),
-              Text(
-                'Locatie: ${interaction.location.latitude.toStringAsFixed(5)}, ${interaction.location.longitude.toStringAsFixed(5)}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
+              _detailRow(
+                ctx,
+                Icons.location_on,
+                'Locatie',
+                '${interaction.location.latitude.toStringAsFixed(5)}, ${interaction.location.longitude.toStringAsFixed(5)}',
               ),
             ],
           ),
@@ -1027,7 +1060,7 @@ class _MapScreenState extends State<MapScreen> {
                   if (_livingLabs != null) ..._heatmapLayers(),
                 MarkerLayer(markers: _detectionMarkers()),
                 MarkerLayer(markers: _interactionMarkers()),
-                if (_filterNotifier?.state.showAnimals ?? true)
+                if (_showAnimalsLayer)
                   MarkerLayer(markers: _animalMarkers()),
               ],
             ),

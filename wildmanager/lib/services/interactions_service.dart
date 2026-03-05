@@ -6,7 +6,7 @@ import '../config/app_config.dart';
 import '../models/interaction.dart';
 
 const int _minRadiusMeters = 1;
-const int _maxRadiusMeters = 10000;
+const int _maxRadiusMeters = 50000;
 
 Future<List<Interaction>> fetchInteractions({
   required LatLng center,
