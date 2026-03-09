@@ -7,7 +7,7 @@ Color colorForInteractionType(int typeId) {
     case interactionTypeSighting:
       return const Color(0xFF7B1FA2);
     case interactionTypeDamage:
-      return const Color(0xFFF9A825);
+      return const Color(0xFF00897B);
     case interactionTypeCollision:
       return const Color(0xFF1976D2);
     default:

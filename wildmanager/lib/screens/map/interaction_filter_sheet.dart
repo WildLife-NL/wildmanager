@@ -112,7 +112,6 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
               DropdownMenuItem(value: null, child: Text('Alle detecties')),
               DropdownMenuItem(value: DetectionType.visual, child: Text('Visueel')),
               DropdownMenuItem(value: DetectionType.acoustic, child: Text('Acoustisch')),
-              DropdownMenuItem(value: DetectionType.chemical, child: Text('Chemisch')),
               DropdownMenuItem(value: DetectionType.other, child: Text('Overig')),
             ],
             onChanged: (v) => setState(() => _selectedDetectionType = v),
@@ -154,7 +153,7 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
             },
           ),
           const SizedBox(height: 20),
-          Text('Heatmap', style: Theme.of(context).textTheme.titleMedium),
+          Text('Recreatiedruk', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           TextFormField(
             controller: _roodVanafController,

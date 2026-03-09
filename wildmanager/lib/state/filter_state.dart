@@ -10,11 +10,11 @@ class FilterState {
     this.schade = true,
     this.aanrijding = true,
     this.detectie = true,
-    this.detectieVisueel = false,
-    this.detectieAkoestisch = false,
-    this.detectieChemisch = false,
-    this.detectieOverig = false,
+    this.detectieVisueel = true,
+    this.detectieAkoestisch = true,
+    this.detectieOverig = true,
     this.showAnimals = true,
+    this.showAnimalPath = true,
     this.showHeatmap = true,
     this.showLivingLab = true,
     this.heatmapRoodVanaf,
@@ -29,15 +29,23 @@ class FilterState {
   final bool detectie;
   final bool detectieVisueel;
   final bool detectieAkoestisch;
-  final bool detectieChemisch;
   final bool detectieOverig;
   final bool showAnimals;
+  final bool showAnimalPath;
   final bool showHeatmap;
   final bool showLivingLab;
   final int? heatmapRoodVanaf;
   final double? heatmapCellSizeMeters;
 
-  static FilterState get defaults => const FilterState();
+  static FilterState get defaults {
+    final now = DateTime.now();
+    final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+    final weekAgo = endOfToday.subtract(const Duration(days: 7));
+    return const FilterState().copyWith(
+      momentAfter: weekAgo,
+      momentBefore: endOfToday,
+    );
+  }
 
   int get activeFilterCount {
     var n = 0;
@@ -47,6 +55,7 @@ class FilterState {
     if (!aanrijding) n++;
     if (!detectie) n++;
     if (!showAnimals) n++;
+    if (!showAnimalPath) n++;
     if (!showHeatmap) n++;
     if (!showLivingLab) n++;
     return n;
@@ -58,7 +67,7 @@ class FilterState {
       waarneming || schade || aanrijding || detectie;
 
   bool get hasAnyDetectionSubtypeSelected =>
-      detectieVisueel || detectieAkoestisch || detectieChemisch || detectieOverig;
+      detectieVisueel || detectieAkoestisch || detectieOverig;
 
   bool interactionTypeMatches(int typeId) {
     if (!hasAnyInteractionTypeSelected) return false;
@@ -75,7 +84,7 @@ class FilterState {
   }
 
   bool detectionTypeMatches(dynamic type) {
-    if (!hasAnyEventTypeSelected) return true;
+    if (!hasAnyEventTypeSelected) return false;
     if (!detectie) return false;
     if (!hasAnyDetectionSubtypeSelected) return true;
     if (type is DetectionType) {
@@ -85,7 +94,6 @@ class FilterState {
         case DetectionType.acoustic:
           return detectieAkoestisch;
         case DetectionType.chemical:
-          return detectieChemisch;
         case DetectionType.other:
           return detectieOverig;
       }
@@ -105,9 +113,9 @@ class FilterState {
           detectie == other.detectie &&
           detectieVisueel == other.detectieVisueel &&
           detectieAkoestisch == other.detectieAkoestisch &&
-          detectieChemisch == other.detectieChemisch &&
           detectieOverig == other.detectieOverig &&
           showAnimals == other.showAnimals &&
+          showAnimalPath == other.showAnimalPath &&
           showHeatmap == other.showHeatmap &&
           showLivingLab == other.showLivingLab &&
           heatmapRoodVanaf == other.heatmapRoodVanaf &&
@@ -123,9 +131,9 @@ class FilterState {
         detectie,
         detectieVisueel,
         detectieAkoestisch,
-        detectieChemisch,
         detectieOverig,
         showAnimals,
+        showAnimalPath,
         showHeatmap,
         showLivingLab,
         heatmapRoodVanaf,
@@ -141,9 +149,9 @@ class FilterState {
     bool? detectie,
     bool? detectieVisueel,
     bool? detectieAkoestisch,
-    bool? detectieChemisch,
     bool? detectieOverig,
     bool? showAnimals,
+    bool? showAnimalPath,
     bool? showHeatmap,
     bool? showLivingLab,
     int? heatmapRoodVanaf,
@@ -162,9 +170,9 @@ class FilterState {
       detectie: detectie ?? this.detectie,
       detectieVisueel: detectieVisueel ?? this.detectieVisueel,
       detectieAkoestisch: detectieAkoestisch ?? this.detectieAkoestisch,
-      detectieChemisch: detectieChemisch ?? this.detectieChemisch,
       detectieOverig: detectieOverig ?? this.detectieOverig,
       showAnimals: showAnimals ?? this.showAnimals,
+      showAnimalPath: showAnimalPath ?? this.showAnimalPath,
       showHeatmap: showHeatmap ?? this.showHeatmap,
       showLivingLab: showLivingLab ?? this.showLivingLab,
       heatmapRoodVanaf: clearHeatmapRoodVanaf ? null : (heatmapRoodVanaf ?? this.heatmapRoodVanaf),

@@ -59,16 +59,19 @@ class Interaction {
 
       final sighting = json['reportOfSighting'] as Map<String, dynamic>? ?? json['report_of_sighting'] as Map<String, dynamic>?;
       if (sighting != null) {
+        speciesCommonName ??= fromSpecies(sighting['species'] as Map<String, dynamic>?);
+        speciesCommonName ??= sighting['speciesCommonName'] as String? ?? sighting['species_common_name'] as String? ?? sighting['commonName'] as String?;
+        speciesCategory ??= (sighting['species'] as Map<String, dynamic>?)?['category'] as String? ?? sighting['speciesCategory'] as String?;
         final involved = sighting['involvedAnimals'] as List<dynamic>? ?? sighting['involved_animals'] as List<dynamic>?;
         final first = involved?.isNotEmpty == true ? involved!.first as Map<String, dynamic>? : null;
         final species = first?['species'] ?? sighting['species'] as Map<String, dynamic>?;
         if (species != null) {
-          speciesCommonName = fromSpecies(species);
-          speciesCategory = species['category'] as String? ?? species['speciesCategory'] as String?;
+          speciesCommonName ??= fromSpecies(species);
+          speciesCategory ??= species['category'] as String? ?? species['speciesCategory'] as String?;
         }
         speciesCommonName ??= first?['speciesCommonName'] as String? ?? first?['species_common_name'] as String? ?? first?['commonName'] as String?;
       }
-      speciesCommonName ??= json['speciesCommonName'] as String? ?? json['species_common_name'] as String?;
+      speciesCommonName ??= json['speciesCommonName'] as String? ?? json['species_common_name'] as String? ?? json['commonName'] as String?;
       final topSpecies = json['species'] as Map<String, dynamic>?;
       speciesCommonName ??= fromSpecies(topSpecies);
       speciesCategory ??= json['speciesCategory'] as String? ?? json['species_category'] as String? ?? (topSpecies != null ? topSpecies['category'] as String? : null);
