@@ -14,6 +14,7 @@ class FilterState {
     this.detectieAkoestisch = true,
     this.detectieOverig = true,
     this.showAnimals = true,
+    this.showAnimalPath = true,
     this.showHeatmap = true,
     this.showLivingLab = true,
     this.heatmapRoodVanaf,
@@ -30,6 +31,7 @@ class FilterState {
   final bool detectieAkoestisch;
   final bool detectieOverig;
   final bool showAnimals;
+  final bool showAnimalPath;
   final bool showHeatmap;
   final bool showLivingLab;
   final int? heatmapRoodVanaf;
@@ -53,6 +55,7 @@ class FilterState {
     if (!aanrijding) n++;
     if (!detectie) n++;
     if (!showAnimals) n++;
+    if (!showAnimalPath) n++;
     if (!showHeatmap) n++;
     if (!showLivingLab) n++;
     return n;
@@ -112,6 +115,7 @@ class FilterState {
           detectieAkoestisch == other.detectieAkoestisch &&
           detectieOverig == other.detectieOverig &&
           showAnimals == other.showAnimals &&
+          showAnimalPath == other.showAnimalPath &&
           showHeatmap == other.showHeatmap &&
           showLivingLab == other.showLivingLab &&
           heatmapRoodVanaf == other.heatmapRoodVanaf &&
@@ -129,6 +133,7 @@ class FilterState {
         detectieAkoestisch,
         detectieOverig,
         showAnimals,
+        showAnimalPath,
         showHeatmap,
         showLivingLab,
         heatmapRoodVanaf,
@@ -146,6 +151,7 @@ class FilterState {
     bool? detectieAkoestisch,
     bool? detectieOverig,
     bool? showAnimals,
+    bool? showAnimalPath,
     bool? showHeatmap,
     bool? showLivingLab,
     int? heatmapRoodVanaf,
@@ -166,6 +172,7 @@ class FilterState {
       detectieAkoestisch: detectieAkoestisch ?? this.detectieAkoestisch,
       detectieOverig: detectieOverig ?? this.detectieOverig,
       showAnimals: showAnimals ?? this.showAnimals,
+      showAnimalPath: showAnimalPath ?? this.showAnimalPath,
       showHeatmap: showHeatmap ?? this.showHeatmap,
       showLivingLab: showLivingLab ?? this.showLivingLab,
       heatmapRoodVanaf: clearHeatmapRoodVanaf ? null : (heatmapRoodVanaf ?? this.heatmapRoodVanaf),

@@ -77,6 +77,7 @@ class _MapScreenState extends State<MapScreen> {
   int _detectionRequestId = 0;
 
   List<Animal>? _animals;
+  Map<String, List<LatLng>>? _animalTrails;
   bool _animalsLoading = false;
   int _animalRequestId = 0;
   Timer? _animalsDebounce;
@@ -118,6 +119,7 @@ class _MapScreenState extends State<MapScreen> {
       _interactions = null;
       _detections = null;
       _animals = null;
+      _animalTrails = null;
     });
     _loadInteractions();
     _loadDetections();
@@ -383,7 +385,7 @@ class _MapScreenState extends State<MapScreen> {
     setState(() => _animalsLoading = true);
 
     try {
-      final list = await fetchAnimalsInSpan(
+      final result = await fetchAnimalsInSpan(
         center: center,
         radiusMeters: radiusMeters,
         start: start,
@@ -394,7 +396,8 @@ class _MapScreenState extends State<MapScreen> {
       if (requestId != _animalRequestId) return;
 
       setState(() {
-        _animals = list;
+        _animals = result.animals;
+        _animalTrails = result.trailsByAnimalId;
         _animalsLoading = false;
       });
     } catch (e) {
@@ -402,6 +405,7 @@ class _MapScreenState extends State<MapScreen> {
       if (requestId != _animalRequestId) return;
       setState(() {
         _animals = null;
+        _animalTrails = null;
         _animalsLoading = false;
       });
     }
@@ -681,6 +685,22 @@ class _MapScreenState extends State<MapScreen> {
         ? inBounds.take(_maxVisibleMarkersCap).toList()
         : inBounds;
     return toShow.map((a) => _buildAnimalMarker(a)).toList();
+  }
+
+  List<Polyline> _animalTrailPolylines() {
+    final trails = _animalTrails;
+    if (trails == null || trails.isEmpty) return [];
+    final polylines = <Polyline>[];
+    for (final entry in trails.entries) {
+      final points = entry.value;
+      if (points.length < 2) continue;
+      polylines.add(Polyline(
+        points: points,
+        color: const Color(0xFF2E7D32).withValues(alpha: 0.7),
+        strokeWidth: 1.5,
+      ));
+    }
+    return polylines;
   }
 
   Marker _buildAnimalMarker(Animal a) {
@@ -1208,8 +1228,11 @@ class _MapScreenState extends State<MapScreen> {
                       if (_livingLabs != null) ..._heatmapLayers(),
                     MarkerLayer(markers: _detectionMarkers()),
                     MarkerLayer(markers: _interactionMarkers()),
-                    if (showAnimals)
+                    if (showAnimals) ...[
+                      if (notifier.state.showAnimalPath && _animalTrailPolylines().isNotEmpty)
+                        PolylineLayer(polylines: _animalTrailPolylines()),
                       MarkerLayer(markers: _animalMarkers()),
+                    ],
                   ],
                 );
               },
