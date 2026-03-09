@@ -7,7 +7,6 @@ import '../config/app_config.dart';
 const int _minRadiusMeters = 1;
 const int _maxRadiusMeters = 50000;
 
-/// Result of fetching animals in a spatiotemporal span, including movement trails.
 class AnimalsWithTrails {
   const AnimalsWithTrails({
     required this.animals,
@@ -17,8 +16,6 @@ class AnimalsWithTrails {
   final Map<String, List<LatLng>> trailsByAnimalId;
 }
 
-/// Parses movement trail points from animal JSON (borneSensorDeployments -> borneSensorReadings).
-/// Only includes points within [start, end], sorted by timestamp.
 List<LatLng> _parseTrailFromAnimalMap(
   Map<String, dynamic> map,
   DateTime start,
