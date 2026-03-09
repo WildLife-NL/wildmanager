@@ -112,7 +112,6 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
               DropdownMenuItem(value: null, child: Text('Alle detecties')),
               DropdownMenuItem(value: DetectionType.visual, child: Text('Visueel')),
               DropdownMenuItem(value: DetectionType.acoustic, child: Text('Acoustisch')),
-              DropdownMenuItem(value: DetectionType.chemical, child: Text('Chemisch')),
               DropdownMenuItem(value: DetectionType.other, child: Text('Overig')),
             ],
             onChanged: (v) => setState(() => _selectedDetectionType = v),

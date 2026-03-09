@@ -173,14 +173,7 @@ class _FilterContentState extends State<FilterContent> {
                         controlAffinity: ListTileControlAffinity.leading,
                       ),
                       CheckboxListTile(
-                        title: const Text('Detectie chemisch'),
-                        value: _draft.detectieChemisch,
-                        onChanged: (v) => setState(() =>
-                            _draft = _draft.copyWith(detectieChemisch: v ?? false)),
-                        controlAffinity: ListTileControlAffinity.leading,
-                      ),
-                      CheckboxListTile(
-                        title: const Text('Detectie overig'),
+                        title: const Text('Overig'),
                         value: _draft.detectieOverig,
                         onChanged: (v) => setState(() =>
                             _draft = _draft.copyWith(detectieOverig: v ?? false)),

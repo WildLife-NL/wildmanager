@@ -12,7 +12,6 @@ class FilterState {
     this.detectie = true,
     this.detectieVisueel = false,
     this.detectieAkoestisch = false,
-    this.detectieChemisch = false,
     this.detectieOverig = false,
     this.showAnimals = true,
     this.showHeatmap = true,
@@ -29,7 +28,6 @@ class FilterState {
   final bool detectie;
   final bool detectieVisueel;
   final bool detectieAkoestisch;
-  final bool detectieChemisch;
   final bool detectieOverig;
   final bool showAnimals;
   final bool showHeatmap;
@@ -58,7 +56,7 @@ class FilterState {
       waarneming || schade || aanrijding || detectie;
 
   bool get hasAnyDetectionSubtypeSelected =>
-      detectieVisueel || detectieAkoestisch || detectieChemisch || detectieOverig;
+      detectieVisueel || detectieAkoestisch || detectieOverig;
 
   bool interactionTypeMatches(int typeId) {
     if (!hasAnyInteractionTypeSelected) return false;
@@ -85,7 +83,6 @@ class FilterState {
         case DetectionType.acoustic:
           return detectieAkoestisch;
         case DetectionType.chemical:
-          return detectieChemisch;
         case DetectionType.other:
           return detectieOverig;
       }
@@ -105,7 +102,6 @@ class FilterState {
           detectie == other.detectie &&
           detectieVisueel == other.detectieVisueel &&
           detectieAkoestisch == other.detectieAkoestisch &&
-          detectieChemisch == other.detectieChemisch &&
           detectieOverig == other.detectieOverig &&
           showAnimals == other.showAnimals &&
           showHeatmap == other.showHeatmap &&
@@ -123,7 +119,6 @@ class FilterState {
         detectie,
         detectieVisueel,
         detectieAkoestisch,
-        detectieChemisch,
         detectieOverig,
         showAnimals,
         showHeatmap,
@@ -141,7 +136,6 @@ class FilterState {
     bool? detectie,
     bool? detectieVisueel,
     bool? detectieAkoestisch,
-    bool? detectieChemisch,
     bool? detectieOverig,
     bool? showAnimals,
     bool? showHeatmap,
@@ -162,7 +156,6 @@ class FilterState {
       detectie: detectie ?? this.detectie,
       detectieVisueel: detectieVisueel ?? this.detectieVisueel,
       detectieAkoestisch: detectieAkoestisch ?? this.detectieAkoestisch,
-      detectieChemisch: detectieChemisch ?? this.detectieChemisch,
       detectieOverig: detectieOverig ?? this.detectieOverig,
       showAnimals: showAnimals ?? this.showAnimals,
       showHeatmap: showHeatmap ?? this.showHeatmap,
