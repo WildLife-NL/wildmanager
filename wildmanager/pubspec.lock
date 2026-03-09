@@ -618,7 +618,7 @@ packages:
     description:
       path: wildlifenl_animal_components
       ref: Wildlife-rapport-Components
-      resolved-ref: "9f2852bc2f66ea1d46bc754f970cd3ba35b9cf4c"
+      resolved-ref: "52e5df8537d7e2ebca615dee582d4f812162480e"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "0.1.0"

@@ -35,7 +35,15 @@ class FilterState {
   final int? heatmapRoodVanaf;
   final double? heatmapCellSizeMeters;
 
-  static FilterState get defaults => const FilterState();
+  static FilterState get defaults {
+    final now = DateTime.now();
+    final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+    final weekAgo = endOfToday.subtract(const Duration(days: 7));
+    return const FilterState().copyWith(
+      momentAfter: weekAgo,
+      momentBefore: endOfToday,
+    );
+  }
 
   int get activeFilterCount {
     var n = 0;
