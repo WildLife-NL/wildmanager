@@ -20,6 +20,7 @@ class FilterContent extends StatefulWidget {
 
 class _FilterContentState extends State<FilterContent> {
   late FilterState _draft;
+  late TextEditingController _heatmapRoodController;
 
   static String _formatDate(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}-${d.month.toString().padLeft(2, '0')}-${d.year}';
@@ -28,6 +29,9 @@ class _FilterContentState extends State<FilterContent> {
   void initState() {
     super.initState();
     _draft = widget.initialDraft;
+    _heatmapRoodController = TextEditingController(
+      text: widget.initialDraft.heatmapRoodVanaf?.toString() ?? '',
+    );
   }
 
   @override
@@ -35,7 +39,14 @@ class _FilterContentState extends State<FilterContent> {
     super.didUpdateWidget(oldWidget);
     if (widget.initialDraft != oldWidget.initialDraft) {
       _draft = widget.initialDraft;
+      _heatmapRoodController.text = _draft.heatmapRoodVanaf?.toString() ?? '';
     }
+  }
+
+  @override
+  void dispose() {
+    _heatmapRoodController.dispose();
+    super.dispose();
   }
 
   void _apply() {
@@ -212,6 +223,36 @@ class _FilterContentState extends State<FilterContent> {
                 onChanged: (v) => setState(() => _draft = _draft.copyWith(showHeatmap: v)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
+              if (_draft.showHeatmap) ...[
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 24, bottom: 4),
+                  child: TextField(
+                    controller: _heatmapRoodController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Druk bij … (rood vanaf waarde)',
+                      hintText: 'bijv. 100',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    onChanged: (v) {
+                      final n = int.tryParse(v.trim());
+                      setState(() => _draft = n != null && n > 0
+                          ? _draft.copyWith(heatmapRoodVanaf: n)
+                          : _draft.copyWith(clearHeatmapRoodVanaf: true));
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 24, bottom: 8),
+                  child: Text(
+                    'Rood = deze waarde of hoger. Schaal naar groen is gelijk, zodat dagen vergelijkbaar zijn.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
               SwitchListTile(
                 title: const Text('Living lab'),
                 value: _draft.showLivingLab,

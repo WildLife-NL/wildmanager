@@ -142,6 +142,7 @@ class _MapScreenState extends State<MapScreen> {
         _scheduleSaveMapState();
         _scheduleLoadInteractions();
         _scheduleLoadDetections();
+        if (_showAnimalsLayer) _scheduleLoadAnimals();
       });
 
       if (mounted) {
@@ -585,9 +586,7 @@ class _MapScreenState extends State<MapScreen> {
 
   bool get _showAnimalsLayer {
     final fs = _filterNotifier?.state ?? FilterState.defaults;
-    if (!(fs.showAnimals)) return false;
-    final onlyDetections = fs.detectie && !fs.hasAnyInteractionTypeSelected;
-    return !onlyDetections;
+    return fs.showAnimals;
   }
 
   List<Marker> _interactionMarkers() {
@@ -625,6 +624,10 @@ class _MapScreenState extends State<MapScreen> {
     return true;
   }
 
+  static String _detectionLocationKey(LatLng loc) {
+    return '${loc.latitude.toStringAsFixed(6)}_${loc.longitude.toStringAsFixed(6)}';
+  }
+
   List<Marker> _detectionMarkers() {
     final list = _detections;
     if (list == null || list.isEmpty) return [];
@@ -636,13 +639,25 @@ class _MapScreenState extends State<MapScreen> {
     try {
       bounds = _mapController.camera.visibleBounds;
     } catch (_) {
-      return filtered.take(_maxVisibleMarkersCap).map((d) => _buildDetectionMarker(d)).toList();
+      final groups = _groupDetectionsByLocation(filtered);
+      return groups.take(_maxVisibleMarkersCap).map((g) => g.length == 1
+          ? _buildDetectionMarker(g.single)
+          : _buildDetectionClusterMarker(g)).toList();
     }
     final inBounds = filtered.where((d) => pointInBounds(d.location, bounds)).toList();
-    final toShow = inBounds.length > _maxVisibleMarkersCap
-        ? inBounds.take(_maxVisibleMarkersCap).toList()
-        : inBounds;
-    return toShow.map((d) => _buildDetectionMarker(d)).toList();
+    final groups = _groupDetectionsByLocation(inBounds);
+    final toShow = groups.take(_maxVisibleMarkersCap).toList();
+    return toShow.map((g) => g.length == 1
+        ? _buildDetectionMarker(g.single)
+        : _buildDetectionClusterMarker(g)).toList();
+  }
+
+  List<List<Detection>> _groupDetectionsByLocation(List<Detection> list) {
+    final map = <String, List<Detection>>{};
+    for (final d in list) {
+      map.putIfAbsent(_detectionLocationKey(d.location), () => []).add(d);
+    }
+    return map.values.toList();
   }
 
   List<Marker> _animalMarkers() {
@@ -699,6 +714,7 @@ class _MapScreenState extends State<MapScreen> {
             controller: scrollController,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Material(
                     color: const Color(0xFF2E7D32),
@@ -714,22 +730,38 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      a.name,
-                      style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          a.speciesCommonName ?? a.displaySpecies ?? 'Dier',
+                          style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        if (a.speciesCategory != null && a.speciesCategory!.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            a.speciesCategory!,
+                            style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                                  color: Colors.grey.shade700,
+                                ),
+                          ),
+                        ],
+                        const SizedBox(height: 6),
+                        Text(
+                          a.name,
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey.shade600,
+                              ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               _detailRow(ctx, Icons.tag, 'ID', a.id),
-              _detailRow(ctx, Icons.label, 'Naam', a.name),
-              if (a.speciesCommonName != null && a.speciesCommonName!.isNotEmpty)
-                _detailRow(ctx, Icons.pets, 'Soort (common name)', a.speciesCommonName!),
               if (a.speciesLatinName != null && a.speciesLatinName!.isNotEmpty)
                 _detailRow(ctx, Icons.science, 'Soort (wetenschappelijke naam)', a.speciesLatinName!),
-              if (a.speciesCategory != null && a.speciesCategory!.isNotEmpty)
-                _detailRow(ctx, Icons.category, 'Categorie', a.speciesCategory!),
               if (a.locationTimestamp != null)
                 _detailRow(ctx, Icons.schedule, 'Tijdstip locatie', formatMoment(a.locationTimestamp!)),
               const SizedBox(height: 12),
@@ -817,6 +849,101 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  Marker _buildDetectionClusterMarker(List<Detection> list) {
+    final d = list.first;
+    final count = list.length;
+    return Marker(
+      point: d.location,
+      width: 40,
+      height: 40,
+      child: GestureDetector(
+        onTap: () => _showDetectionClusterDetail(list),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Material(
+              color: d.type.color,
+              shape: const CircleBorder(),
+              elevation: 2,
+              child: Center(
+                child: _detectionIcon(d.species, size: 20),
+              ),
+            ),
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white, width: 1),
+                ),
+                child: Text(
+                  count > 99 ? '99+' : '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDetectionClusterDetail(List<Detection> list) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.25,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (ctx, scrollController) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: ListView(
+            controller: scrollController,
+            children: [
+              Text(
+                '${list.length} detecties op deze locatie',
+                style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ...list.map((d) => ListTile(
+                leading: Material(
+                  color: d.type.color,
+                  shape: const CircleBorder(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: _detectionIcon(d.species, size: 20),
+                  ),
+                ),
+                title: Text(
+                  d.species != null && d.species!.isNotEmpty ? d.species! : 'Detectie',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                subtitle: Text(
+                  _detectionTypeLabel(d.type) +
+                      (d.moment != null ? ' · ${formatMoment(d.moment!)}' : ''),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _showDetectionDetail(d);
+                },
+              )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showDetectionDetail(Detection d) {
     showModalBottomSheet<void>(
       context: context,
@@ -866,7 +993,6 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              _detailRow(ctx, Icons.tag, 'ID', d.id),
               if (d.moment != null)
                 _detailRow(ctx, Icons.schedule, 'Tijdstip', formatMoment(d.moment!)),
               const SizedBox(height: 12),
@@ -876,6 +1002,8 @@ class _MapScreenState extends State<MapScreen> {
                 'Locatie',
                 '${d.location.latitude.toStringAsFixed(5)}, ${d.location.longitude.toStringAsFixed(5)}',
               ),
+              const SizedBox(height: 12),
+              _detailRow(ctx, Icons.tag, 'ID', d.id),
             ],
           ),
         ),
@@ -1050,28 +1178,33 @@ class _MapScreenState extends State<MapScreen> {
       child: Scaffold(
         body: Stack(
           children: [
-            WildLifeNLMap(
-              userAgentPackageName: 'wildmanager',
-              mapController: _mapController,
-              options: MapOptions(
-                initialCenter: initialCenter,
-                initialZoom: initialZoom,
-                minZoom: minZoom,
-                maxZoom: maxZoom,
-                interactionOptions: InteractionOptions(
-                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                ),
-              ),
-              extraLayers: [
-                if (_filterNotifier?.state.showLivingLab ?? true)
-                  if (_livingLabs != null) ..._livingLabPolygonLayers(),
-                if (_filterNotifier?.state.showHeatmap ?? true)
-                  if (_livingLabs != null) ..._heatmapLayers(),
-                MarkerLayer(markers: _detectionMarkers()),
-                MarkerLayer(markers: _interactionMarkers()),
-                if (_showAnimalsLayer)
-                  MarkerLayer(markers: _animalMarkers()),
-              ],
+            Consumer<MapFilterNotifier>(
+              builder: (context, notifier, _) {
+                final showAnimals = notifier.state.showAnimals;
+                return WildLifeNLMap(
+                  userAgentPackageName: 'wildmanager',
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: initialCenter,
+                    initialZoom: initialZoom,
+                    minZoom: minZoom,
+                    maxZoom: maxZoom,
+                    interactionOptions: InteractionOptions(
+                      flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                    ),
+                  ),
+                  extraLayers: [
+                    if (notifier.state.showLivingLab)
+                      if (_livingLabs != null) ..._livingLabPolygonLayers(),
+                    if (notifier.state.showHeatmap)
+                      if (_livingLabs != null) ..._heatmapLayers(),
+                    MarkerLayer(markers: _detectionMarkers()),
+                    MarkerLayer(markers: _interactionMarkers()),
+                    if (showAnimals)
+                      MarkerLayer(markers: _animalMarkers()),
+                  ],
+                );
+              },
             ),
             ListenableBuilder(
               listenable: _filterPanelController,

@@ -73,7 +73,7 @@ class FilterState {
   }
 
   bool detectionTypeMatches(dynamic type) {
-    if (!hasAnyEventTypeSelected) return true;
+    if (!hasAnyEventTypeSelected) return false;
     if (!detectie) return false;
     if (!hasAnyDetectionSubtypeSelected) return true;
     if (type is DetectionType) {
