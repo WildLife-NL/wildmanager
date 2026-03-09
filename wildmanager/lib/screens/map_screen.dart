@@ -497,10 +497,17 @@ class _MapScreenState extends State<MapScreen> {
     }
     setState(() => _heatmapLoading = true);
     final fs = _filterNotifier?.state ?? FilterState.defaults;
+    var end = fs.momentBefore != null
+        ? DateTime(fs.momentBefore!.year, fs.momentBefore!.month, fs.momentBefore!.day, 23, 59, 59, 999)
+        : DateTime.now();
+    var start = fs.momentAfter ?? end.subtract(const Duration(days: 30));
+    if (start.isAfter(end)) start = end.subtract(const Duration(days: 1));
     try {
       final cellSize = fs.heatmapCellSizeMeters ?? defaultVisitationCellSize;
       final cells = await fetchVisitationForLivingLabs(
         labs,
+        start: start,
+        end: end,
         cellSize: cellSize,
         maxCount: fs.heatmapRoodVanaf,
       );
