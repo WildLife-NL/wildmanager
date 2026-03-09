@@ -832,6 +832,7 @@ class _MapScreenState extends State<MapScreen> {
             controller: scrollController,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Material(
                     color: d.type.color,
@@ -843,20 +844,31 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      _detectionTypeLabel(d.type),
-                      style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          d.species != null && d.species!.isNotEmpty
+                              ? d.species!
+                              : 'Detectie',
+                          style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _detectionTypeLabel(d.type),
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey.shade600,
+                              ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               _detailRow(ctx, Icons.tag, 'ID', d.id),
-              _detailRow(ctx, Icons.category, 'Type', _detectionTypeLabel(d.type)),
               if (d.moment != null)
                 _detailRow(ctx, Icons.schedule, 'Tijdstip', formatMoment(d.moment!)),
-              if (d.species != null && d.species!.isNotEmpty)
-                _detailRow(ctx, Icons.pets, 'Soort', d.species!),
               const SizedBox(height: 12),
               _detailRow(
                 ctx,
