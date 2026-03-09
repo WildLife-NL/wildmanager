@@ -27,13 +27,14 @@ class MapLegend extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 8),
-            _row(context, theme.colorForInteractionType(interactionTypeSighting), 'Waarneming'),
-            _row(context, theme.colorForInteractionType(interactionTypeDamage), 'Schade'),
-            _row(context, theme.colorForInteractionType(interactionTypeCollision), 'Aanrijding'),
-            _row(context, const Color(0xFF2E7D32), 'Dieren'),
-            _row(context, DetectionType.visual.color, 'Detectie visueel'),
-            _row(context, DetectionType.acoustic.color, 'Detectie acoustisch'),
-            _row(context, DetectionType.other.color, 'Overig'),
+            _row(context, theme.colorForInteractionType(interactionTypeSighting), 'Waarneming', isCircle: true),
+            _row(context, theme.colorForInteractionType(interactionTypeDamage), 'Schade', isCircle: true),
+            _row(context, theme.colorForInteractionType(interactionTypeCollision), 'Aanrijding', isCircle: true),
+            _row(context, const Color(0xFF2E7D32), 'Dieren', isCircle: true),
+            _row(context, DetectionType.visual.color, 'Detectie visueel', isCircle: false),
+            _row(context, DetectionType.acoustic.color, 'Detectie akoestisch', isCircle: false),
+            _row(context, DetectionType.chemical.color, 'Detectie chemisch', isCircle: false),
+            _row(context, DetectionType.other.color, 'Detectie overig', isCircle: false),
             const SizedBox(height: 6),
             Row(
               children: [
@@ -74,7 +75,7 @@ class MapLegend extends StatelessWidget {
     );
   }
 
-  Widget _row(BuildContext context, Color color, String label) {
+  Widget _row(BuildContext context, Color color, String label, {bool isCircle = true}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
@@ -85,7 +86,8 @@ class MapLegend extends StatelessWidget {
             height: 16,
             decoration: BoxDecoration(
               color: color,
-              shape: BoxShape.circle,
+              shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
+              borderRadius: isCircle ? null : BorderRadius.circular(2),
               border: Border.all(color: Colors.white70, width: 1),
               boxShadow: [
                 BoxShadow(

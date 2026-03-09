@@ -858,6 +858,8 @@ class _MapScreenState extends State<MapScreen> {
     return Icon(Icons.pets, color: Colors.white, size: size);
   }
 
+  static final _detectionMarkerShape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(4));
+
   Marker _buildDetectionMarker(Detection d) {
     return Marker(
       point: d.location,
@@ -867,7 +869,7 @@ class _MapScreenState extends State<MapScreen> {
         onTap: () => _showDetectionDetail(d),
         child: Material(
           color: d.type.color,
-          shape: const CircleBorder(),
+          shape: _detectionMarkerShape,
           elevation: 2,
           child: Center(
             child: _detectionIcon(d.species, size: 18),
@@ -891,7 +893,7 @@ class _MapScreenState extends State<MapScreen> {
           children: [
             Material(
               color: d.type.color,
-              shape: const CircleBorder(),
+              shape: _detectionMarkerShape,
               elevation: 2,
               child: Center(
                 child: _detectionIcon(d.species, size: 20),
@@ -945,7 +947,7 @@ class _MapScreenState extends State<MapScreen> {
               ...list.map((d) => ListTile(
                 leading: Material(
                   color: d.type.color,
-                  shape: const CircleBorder(),
+                  shape: _detectionMarkerShape,
                   child: Padding(
                     padding: const EdgeInsets.all(8),
                     child: _detectionIcon(d.species, size: 20),
@@ -991,7 +993,7 @@ class _MapScreenState extends State<MapScreen> {
                 children: [
                   Material(
                     color: d.type.color,
-                    shape: const CircleBorder(),
+                    shape: _detectionMarkerShape,
                     child: Padding(
                       padding: const EdgeInsets.all(10),
                       child: _detectionIcon(d.species, size: 24),
