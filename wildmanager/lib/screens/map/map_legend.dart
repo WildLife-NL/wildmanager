@@ -51,7 +51,7 @@ class MapLegend extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text('Heatmap', style: _labelStyle(context)),
+                Text('Recreatiedruk', style: _labelStyle(context)),
               ],
             ),
             Row(

@@ -200,7 +200,7 @@ class _FilterContentState extends State<FilterContent> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               SwitchListTile(
-                title: const Text('Heatmap'),
+                title: const Text('Recreatiedruk'),
                 value: _draft.showHeatmap,
                 onChanged: (v) => setState(() => _draft = _draft.copyWith(showHeatmap: v)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

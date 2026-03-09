@@ -154,7 +154,7 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
             },
           ),
           const SizedBox(height: 20),
-          Text('Heatmap', style: Theme.of(context).textTheme.titleMedium),
+          Text('Recreatiedruk', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           TextFormField(
             controller: _roodVanafController,
