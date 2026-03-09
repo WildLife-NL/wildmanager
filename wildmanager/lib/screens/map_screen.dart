@@ -751,6 +751,7 @@ class _MapScreenState extends State<MapScreen> {
                           a.name,
                           style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                                 color: Colors.grey.shade600,
+                                fontSize: 12,
                               ),
                         ),
                       ],
