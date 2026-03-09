@@ -6,10 +6,10 @@ class FilterState {
   const FilterState({
     this.momentAfter,
     this.momentBefore,
-    this.waarneming = false,
-    this.schade = false,
-    this.aanrijding = false,
-    this.detectie = false,
+    this.waarneming = true,
+    this.schade = true,
+    this.aanrijding = true,
+    this.detectie = true,
     this.detectieVisueel = false,
     this.detectieAkoestisch = false,
     this.detectieChemisch = false,
@@ -42,10 +42,10 @@ class FilterState {
   int get activeFilterCount {
     var n = 0;
     if (momentAfter != null || momentBefore != null) n++;
-    if (waarneming) n++;
-    if (schade) n++;
-    if (aanrijding) n++;
-    if (detectie) n++;
+    if (!waarneming) n++;
+    if (!schade) n++;
+    if (!aanrijding) n++;
+    if (!detectie) n++;
     if (!showAnimals) n++;
     if (!showHeatmap) n++;
     if (!showLivingLab) n++;

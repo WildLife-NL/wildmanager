@@ -94,7 +94,7 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<int?>(
-            value: _selectedType,
+            initialValue: _selectedType,
             decoration: const InputDecoration(labelText: 'Interactie type'),
             items: const [
               DropdownMenuItem(value: null, child: Text('Alle types')),
@@ -106,7 +106,7 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<DetectionType?>(
-            value: _selectedDetectionType,
+            initialValue: _selectedDetectionType,
             decoration: const InputDecoration(labelText: 'Detectie type'),
             items: const [
               DropdownMenuItem(value: null, child: Text('Alle detecties')),

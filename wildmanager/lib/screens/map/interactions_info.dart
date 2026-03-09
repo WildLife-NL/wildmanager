@@ -67,7 +67,7 @@ class InteractionsInfo extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Kaart toont ~${visibleStr} breed',
+                        'Kaart toont ~$visibleStr breed',
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.grey.shade600,

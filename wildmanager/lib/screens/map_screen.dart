@@ -166,7 +166,6 @@ class _MapScreenState extends State<MapScreen> {
     PackageInfo.fromPlatform().then((info) {
       if (!mounted) return;
       final build = info.buildNumber.isNotEmpty ? info.buildNumber : 'dev';
-      // Bij datum-versioning (YYYYMMDD) tonen we v20260305 voor onderzoekers.
       final isDateVersion = build.length == 8 && int.tryParse(build) != null;
       setState(() => _versionLabel = isDateVersion ? 'v$build' : 'v${info.version} ($build)');
     });
@@ -584,8 +583,6 @@ class _MapScreenState extends State<MapScreen> {
     ];
   }
 
-  /// Dierenlaag tonen alleen als "Toon dieren" aan staat én we niet in de modus
-  /// "alleen detecties" zitten (anders zouden naast detecties ook dieren zichtbaar zijn).
   bool get _showAnimalsLayer {
     final fs = _filterNotifier?.state ?? FilterState.defaults;
     if (!(fs.showAnimals)) return false;
