@@ -94,7 +94,7 @@ class _ScaleBarIndicatorState extends State<ScaleBarIndicator> {
       chosenPx = math.min(maxPx, lastM / mpp);
     }
 
-    final label = chosenM >= 1000 ? '${chosenM ~/ 1000} km' : '${chosenM} m';
+    final label = chosenM >= 1000 ? '${chosenM ~/ 1000} km' : '$chosenM m';
     if ((chosenPx - _barPx).abs() > 1 || label != _label) {
       setState(() {
         _barPx = chosenPx;
