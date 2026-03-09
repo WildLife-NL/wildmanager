@@ -1135,13 +1135,16 @@ class _MapScreenState extends State<MapScreen> {
                   Consumer<MapFilterNotifier>(
                     builder: (context, notifier, _) {
                       final count = notifier.state.activeFilterCount;
+                      final tooltip = count > 0
+                          ? 'Filters ($count actief)'
+                          : 'Filters (alles aan)';
                       return Badge(
                         isLabelVisible: count > 0,
                         label: Text('$count'),
                         child: IconButton.filled(
                           onPressed: () => _filterPanelController.toggle(),
                           icon: const Icon(Icons.filter_list),
-                          tooltip: 'Filters',
+                          tooltip: tooltip,
                         ),
                       );
                     },

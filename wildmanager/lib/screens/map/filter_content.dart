@@ -71,6 +71,20 @@ class _FilterContentState extends State<FilterContent> {
               Text('Filters', style: theme.textTheme.headlineSmall),
               const SizedBox(height: 4),
               Text(
+                _draft.activeFilterCount == 0
+                    ? 'Alles aan'
+                    : '${_draft.activeFilterCount} filter(s) actief',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: _draft.activeFilterCount == 0
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
+                  fontWeight: _draft.activeFilterCount == 0
+                      ? FontWeight.w600
+                      : null,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
                 'Na toepassen wordt de data opnieuw geladen.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
