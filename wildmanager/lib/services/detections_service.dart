@@ -8,11 +8,8 @@ import '../models/detection.dart';
 const int _minRadiusMeters = 1;
 const int _maxRadiusMeters = 50000;
 
-/// Veel backends accepteren voor detecties alleen een kleine radius (bijv. 1 km).
-/// Boven deze waarde doen we meerdere verzoeken in een grid en voegen we samen.
 const int _detectionApiMaxRadiusMeters = 1000;
 
-/// Berekent grid-centra rond [center] met [stepMeters] afstand (noord/zuid, oost/west).
 List<LatLng> _gridCenters(LatLng center, int radiusMeters, int stepMeters) {
   const distance = Distance();
   final n = (radiusMeters / stepMeters).ceil().clamp(1, 5);
