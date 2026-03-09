@@ -18,11 +18,11 @@ import '../services/interactions_service.dart';
 import '../services/living_labs_service.dart';
 import '../services/visitation_service.dart';
 import 'package:wildlifenl_animal_components/wildlifenl_animal_components.dart';
-import 'package:wildlifenl_assets/wildlifenl_assets.dart';
 import 'package:wildlifenl_detection_components/wildlifenl_detection_components.dart';
 import 'package:wildlifenl_visitation_components/wildlifenl_visitation_components.dart';
 import '../state/filter_state.dart';
 import '../state/map_filter_notifier.dart';
+import '../utils/animal_icon_resolver.dart';
 import 'map/filter_content.dart';
 import 'map/filter_panel_controller.dart';
 import 'map/interaction_theme.dart';
@@ -703,6 +703,22 @@ class _MapScreenState extends State<MapScreen> {
     return polylines;
   }
 
+  Widget _animalIconWidget(String? speciesCommonName, double size) {
+    final iconName = resolveSpeciesToIconName(speciesCommonName) ?? speciesCommonName;
+    if (iconName != null && iconName.isNotEmpty) {
+      final path = '$_animalsAssetPath/$iconName.png';
+      return Image.asset(
+        path,
+        package: _assetsPackage,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => Icon(Icons.pets, color: Colors.white, size: size),
+      );
+    }
+    return Icon(Icons.pets, color: Colors.white, size: size);
+  }
+
   Marker _buildAnimalMarker(Animal a) {
     return Marker(
       point: a.location,
@@ -715,11 +731,7 @@ class _MapScreenState extends State<MapScreen> {
           shape: const CircleBorder(),
           elevation: 2,
           child: Center(
-            child: AnimalIcon(
-              speciesCommonName: a.displaySpecies,
-              size: 22,
-              fallback: Icon(Icons.pets, color: Colors.white, size: 22),
-            ),
+            child: _animalIconWidget(a.displaySpecies, 22),
           ),
         ),
       ),
@@ -748,11 +760,7 @@ class _MapScreenState extends State<MapScreen> {
                     shape: const CircleBorder(),
                     child: Padding(
                       padding: const EdgeInsets.all(10),
-                      child: AnimalIcon(
-                        speciesCommonName: a.displaySpecies,
-                        size: 24,
-                        fallback: Icon(Icons.pets, color: Colors.white, size: 24),
-                      ),
+                      child: _animalIconWidget(a.displaySpecies, 24),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -836,21 +844,20 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   static const String _assetsPackage = 'wildlifenl_assets';
+  static const String _animalsAssetPath = 'assets/icons/animals';
 
   Widget _detectionIcon(String? species, {required double size}) {
-    final fullPath = getAnimalIconPath(species);
-    if (fullPath != null) {
-      final relativePath = fullPath.replaceFirst('packages/$_assetsPackage/', '');
+    final iconName = resolveSpeciesToIconName(species) ?? species;
+    if (iconName != null && iconName.isNotEmpty) {
+      final path = '$_animalsAssetPath/$iconName.png';
       return Image.asset(
-        relativePath,
+        path,
         package: _assetsPackage,
         width: size,
         height: size,
         fit: BoxFit.contain,
         errorBuilder: (_, __, ___) {
-          if (kDebugMode) {
-            debugPrint('[Detection icoon] Laden mislukt: $relativePath (soort: $species)');
-          }
+          if (kDebugMode) debugPrint('[Detection icoon] Laden mislukt: $path (soort: $species)');
           return Icon(Icons.pets, color: Colors.white, size: size);
         },
       );
@@ -1064,26 +1071,19 @@ class _MapScreenState extends State<MapScreen> {
     if (_isSighting(i)) {
       final name = i.speciesCommonName?.trim();
       if (name != null && name.isNotEmpty) {
-        final fullPath = getAnimalIconPath(name);
-        if (fullPath != null) {
-          final relativePath = fullPath.replaceFirst('packages/$_assetsPackage/', '');
-          return Image.asset(
-            relativePath,
-            package: _assetsPackage,
-            width: size,
-            height: size,
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) {
-              if (kDebugMode) {
-                debugPrint('[Waarneming icoon] Laden mislukt: $relativePath (soort: $name)');
-              }
-              return Icon(iconForInteractionType(i.typeId), color: Colors.white, size: size);
-            },
-          );
-        }
-        if (kDebugMode) debugPrint('[Interactions] Waarneming soort "$name" heeft geen icoon in assets');
-      } else if (kDebugMode) {
-        debugPrint('[Interactions] Waarneming zonder soort: typeId=${i.typeId}, typeName=${i.typeName}');
+        final iconName = resolveSpeciesToIconName(name) ?? name;
+        final path = '$_animalsAssetPath/$iconName.png';
+        return Image.asset(
+          path,
+          package: _assetsPackage,
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) {
+            if (kDebugMode) debugPrint('[Waarneming icoon] Laden mislukt: $path (soort: $name)');
+            return Icon(iconForInteractionType(i.typeId), color: Colors.white, size: size);
+          },
+        );
       }
     }
     return Icon(iconForInteractionType(i.typeId), color: Colors.white, size: size);
@@ -1112,6 +1112,11 @@ class _MapScreenState extends State<MapScreen> {
   void _showInteractionDetail(Interaction interaction) {
     final typeLabel = typeLabelForInteraction(interaction);
     final typeColor = colorForInteractionType(interaction.typeId);
+    final isSighting = _isSighting(interaction);
+    final speciesName = interaction.speciesCommonName?.trim();
+    final hasSpecies = speciesName != null && speciesName.isNotEmpty;
+    final title = isSighting && hasSpecies ? speciesName : typeLabel;
+    final subtitle = isSighting && hasSpecies ? typeLabel : null;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -1126,6 +1131,7 @@ class _MapScreenState extends State<MapScreen> {
             controller: scrollController,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Material(
                     color: typeColor,
@@ -1137,24 +1143,49 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      typeLabel,
-                      style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                                  color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                                ),
                           ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               _detailRow(ctx, Icons.tag, 'ID', interaction.id),
+              if (isSighting)
+                _detailRow(
+                  ctx,
+                  Icons.pets,
+                  'Dier',
+                  hasSpecies
+                      ? (interaction.speciesCategory != null && interaction.speciesCategory!.isNotEmpty
+                          ? '$speciesName (${interaction.speciesCategory})'
+                          : speciesName)
+                      : (interaction.speciesCategory ?? 'Onbekend'),
+                ),
               _detailRow(ctx, Icons.category, 'Type', interaction.typeName),
               _detailRow(ctx, Icons.numbers, 'Type-ID', '${interaction.typeId}'),
               if (interaction.moment != null)
                 _detailRow(ctx, Icons.schedule, 'Tijdstip', formatMoment(interaction.moment!)),
               if (interaction.description != null && interaction.description!.isNotEmpty)
                 _detailRow(ctx, Icons.description, 'Beschrijving', interaction.description!),
-              if (interaction.speciesCommonName != null && interaction.speciesCommonName!.isNotEmpty)
+              if (!isSighting && interaction.speciesCommonName != null && interaction.speciesCommonName!.isNotEmpty)
                 _detailRow(
                   ctx,
                   Icons.pets,
@@ -1163,7 +1194,7 @@ class _MapScreenState extends State<MapScreen> {
                       ? '${interaction.speciesCommonName} (${interaction.speciesCategory})'
                       : interaction.speciesCommonName!,
                 ),
-              if (interaction.speciesCategory != null && interaction.speciesCategory!.isNotEmpty && (interaction.speciesCommonName == null || interaction.speciesCommonName!.isEmpty))
+              if (!isSighting && interaction.speciesCategory != null && interaction.speciesCategory!.isNotEmpty && (interaction.speciesCommonName == null || interaction.speciesCommonName!.isEmpty))
                 _detailRow(ctx, Icons.category, 'Categorie', interaction.speciesCategory!),
               const SizedBox(height: 12),
               _detailRow(

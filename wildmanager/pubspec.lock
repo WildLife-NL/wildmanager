@@ -77,10 +77,10 @@ packages:
     dependency: transitive
     description:
       name: ffi
-      sha256: d07d37192dbf97461359c1518788f203b0c9102cfd2c35a716b823741219542c
+      sha256: "6d7fd89431262d8f3125e81b50d3847a091d846eafcd4fdb88dd06f36d705a45"
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.5"
+    version: "2.2.0"
   file:
     dependency: transitive
     description:
@@ -412,10 +412,10 @@ packages:
     dependency: transitive
     description:
       name: petitparser
-      sha256: "1a97266a94f7350d30ae522c0af07890c70b8e62c71e8e3920d1db4d23c057d1"
+      sha256: "91bd59303e9f769f108f8df05e371341b15d59e995e6806aefab827b58336675"
       url: "https://pub.dev"
     source: hosted
-    version: "7.0.1"
+    version: "7.0.2"
   platform:
     dependency: transitive
     description:
@@ -468,10 +468,10 @@ packages:
     dependency: transitive
     description:
       name: shared_preferences_android
-      sha256: cbc40be9be1c5af4dab4d6e0de4d5d3729e6f3d65b89d21e1815d57705644a6f
+      sha256: "8374d6200ab33ac99031a852eba4c8eb2170c4bf20778b3e2c9eccb45384fb41"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.20"
+    version: "2.4.21"
   shared_preferences_foundation:
     dependency: transitive
     description:
@@ -585,10 +585,10 @@ packages:
     dependency: transitive
     description:
       name: uuid
-      sha256: a11b666489b1954e01d992f3d601b1804a33937b5a8fe677bd26b8a9f96f96e8
+      sha256: "1fef9e8e11e2991bb773070d4656b7bd5d850967a2456cfc83cf47925ba79489"
       url: "https://pub.dev"
     source: hosted
-    version: "4.5.2"
+    version: "4.5.3"
   vector_math:
     dependency: transitive
     description:
@@ -617,8 +617,8 @@ packages:
     dependency: "direct main"
     description:
       path: wildlifenl_animal_components
-      ref: Wildlife-rapport-Components
-      resolved-ref: "52e5df8537d7e2ebca615dee582d4f812162480e"
+      ref: main
+      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "0.1.0"
@@ -626,8 +626,8 @@ packages:
     dependency: "direct main"
     description:
       path: wildlifenl_assets_components
-      ref: Wildlife-rapport-Components
-      resolved-ref: "72b14612da0dec7effe651d61b6575aaf93a86b7"
+      ref: main
+      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "0.1.0"
@@ -635,8 +635,8 @@ packages:
     dependency: "direct main"
     description:
       path: wildlifenl_detection_components
-      ref: Wildlife-rapport-Components
-      resolved-ref: "6c969064f3189b4c1561106c455b825dd444e36d"
+      ref: main
+      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "0.1.0"
@@ -644,8 +644,8 @@ packages:
     dependency: "direct main"
     description:
       path: wildlifenl_interaction_components
-      ref: Wildlife-rapport-Components
-      resolved-ref: "6c969064f3189b4c1561106c455b825dd444e36d"
+      ref: main
+      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "0.1.0"
@@ -653,8 +653,8 @@ packages:
     dependency: "direct main"
     description:
       path: wildlifenl_login_components
-      ref: Wildlife-rapport-Components
-      resolved-ref: "0824bf1bb8fc3f101781d0836198a13bfa617fa5"
+      ref: main
+      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "0.1.0"
@@ -662,8 +662,8 @@ packages:
     dependency: "direct main"
     description:
       path: wildlifenl_map_logic_components
-      ref: Wildlife-rapport-Components
-      resolved-ref: c6785131cf18676d2734eb1cb6e1f02c27f03be4
+      ref: main
+      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "1.0.0"
@@ -671,8 +671,8 @@ packages:
     dependency: "direct main"
     description:
       path: wildlifenl_map_ui_components
-      ref: Wildlife-rapport-Components
-      resolved-ref: c6785131cf18676d2734eb1cb6e1f02c27f03be4
+      ref: main
+      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "1.1.0"
@@ -680,8 +680,8 @@ packages:
     dependency: "direct main"
     description:
       path: wildlifenl_visitation_components
-      ref: Wildlife-rapport-Components
-      resolved-ref: "72b14612da0dec7effe651d61b6575aaf93a86b7"
+      ref: main
+      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "0.1.0"
