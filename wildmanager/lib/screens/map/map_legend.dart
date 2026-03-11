@@ -33,7 +33,6 @@ class MapLegend extends StatelessWidget {
             _row(context, const Color(0xFF2E7D32), 'Dieren', isCircle: true),
             _row(context, DetectionType.visual.color, 'Detectie visueel', isCircle: false),
             _row(context, DetectionType.acoustic.color, 'Detectie akoestisch', isCircle: false),
-            _row(context, DetectionType.chemical.color, 'Detectie chemisch', isCircle: false),
             _row(context, DetectionType.other.color, 'Detectie overig', isCircle: false),
             const SizedBox(height: 6),
             Row(
