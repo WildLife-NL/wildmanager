@@ -93,6 +93,7 @@ class _MapScreenState extends State<MapScreen> {
   late final FilterPanelController _filterPanelController;
   late final ScrollController _panelScrollController;
   bool _showLegend = true;
+  bool _initialTileRefreshScheduled = false;
 
   String _versionLabel = '';
 
@@ -155,6 +156,17 @@ class _MapScreenState extends State<MapScreen> {
             _loadInteractions();
             _scheduleLoadDetections();
             if (_showAnimalsLayer) _scheduleLoadAnimals();
+            if (!_initialTileRefreshScheduled) {
+              _initialTileRefreshScheduled = true;
+              Future.delayed(const Duration(milliseconds: 200), () {
+                if (!mounted) return;
+                try {
+                  final center = _mapController.camera.center;
+                  final zoom = _mapController.camera.zoom;
+                  _mapController.move(center, zoom);
+                } catch (_) {}
+              });
+            }
           });
         });
 
