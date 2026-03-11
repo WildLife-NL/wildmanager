@@ -1042,17 +1042,22 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
               const SizedBox(height: 16),
+              if (d.sex != null && d.sex!.trim().isNotEmpty)
+                _detailRow(ctx, Icons.wc, 'Geslacht', d.sex!),
+              if (d.condition != null && d.condition!.trim().isNotEmpty)
+                _detailRow(ctx, Icons.favorite, 'Conditie', d.condition!),
+              if (d.lifeStage != null && d.lifeStage!.trim().isNotEmpty)
+                _detailRow(ctx, Icons.cake, 'Levensfase', d.lifeStage!),
               if (d.moment != null)
                 _detailRow(ctx, Icons.schedule, 'Tijdstip', formatMoment(d.moment!)),
               const SizedBox(height: 12),
+              _detailRow(ctx, Icons.tag, 'ID', d.id),
               _detailRow(
                 ctx,
                 Icons.location_on,
                 'Locatie',
                 '${d.location.latitude.toStringAsFixed(5)}, ${d.location.longitude.toStringAsFixed(5)}',
               ),
-              const SizedBox(height: 12),
-              _detailRow(ctx, Icons.tag, 'ID', d.id),
             ],
           ),
         ),
