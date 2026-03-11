@@ -1167,7 +1167,9 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              _detailRow(ctx, Icons.tag, 'ID', interaction.id),
+              if (interaction.reportTypeLabel != null && interaction.reportTypeLabel!.isNotEmpty)
+                _detailRow(ctx, Icons.assignment, 'Rapporttype', interaction.reportTypeLabel!),
+              _detailRow(ctx, Icons.category, 'Type', typeNameShortForInteraction(interaction)),
               if (isSighting)
                 _detailRow(
                   ctx,
@@ -1179,10 +1181,14 @@ class _MapScreenState extends State<MapScreen> {
                           : speciesName)
                       : (interaction.speciesCategory ?? 'Onbekend'),
                 ),
-              _detailRow(ctx, Icons.category, 'Type', interaction.typeName),
-              _detailRow(ctx, Icons.numbers, 'Type-ID', '${interaction.typeId}'),
+              if (interaction.involvedAnimalNames != null && interaction.involvedAnimalNames!.isNotEmpty)
+                _detailRow(ctx, Icons.pets, 'Betrokken dieren', interaction.involvedAnimalNames!.join(', ')),
+              if (interaction.reporterName != null && interaction.reporterName!.trim().isNotEmpty)
+                _detailRow(ctx, Icons.person, 'Gemeld door', interaction.reporterName!),
+              if (interaction.momentReported != null)
+                _detailRow(ctx, Icons.schedule, 'Gemeld op', formatMoment(interaction.momentReported!)),
               if (interaction.moment != null)
-                _detailRow(ctx, Icons.schedule, 'Tijdstip', formatMoment(interaction.moment!)),
+                _detailRow(ctx, Icons.event, 'Gebeurd op', formatMoment(interaction.moment!)),
               if (interaction.description != null && interaction.description!.isNotEmpty)
                 _detailRow(ctx, Icons.description, 'Beschrijving', interaction.description!),
               if (!isSighting && interaction.speciesCommonName != null && interaction.speciesCommonName!.isNotEmpty)
@@ -1197,10 +1203,11 @@ class _MapScreenState extends State<MapScreen> {
               if (!isSighting && interaction.speciesCategory != null && interaction.speciesCategory!.isNotEmpty && (interaction.speciesCommonName == null || interaction.speciesCommonName!.isEmpty))
                 _detailRow(ctx, Icons.category, 'Categorie', interaction.speciesCategory!),
               const SizedBox(height: 12),
+              _detailRow(ctx, Icons.tag, 'ID', interaction.id),
               _detailRow(
                 ctx,
                 Icons.location_on,
-                'Locatie',
+                'Locatie (waar gebeurd)',
                 '${interaction.location.latitude.toStringAsFixed(5)}, ${interaction.location.longitude.toStringAsFixed(5)}',
               ),
             ],

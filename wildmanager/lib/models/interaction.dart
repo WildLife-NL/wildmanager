@@ -11,9 +11,13 @@ class Interaction {
     required this.typeId,
     required this.typeName,
     this.moment,
+    this.momentReported,
     this.description,
     this.speciesCommonName,
     this.speciesCategory,
+    this.reportTypeLabel,
+    this.involvedAnimalNames,
+    this.reporterName,
   });
 
   final String id;
@@ -21,16 +25,20 @@ class Interaction {
   final int typeId;
   final String typeName;
   final DateTime? moment;
+  final DateTime? momentReported;
   final String? description;
   final String? speciesCommonName;
   final String? speciesCategory;
+  final String? reportTypeLabel;
+  final List<String>? involvedAnimalNames;
+  final String? reporterName;
 
   static Interaction? fromJson(Map<String, dynamic> json) {
     try {
       final id = json['ID'] as String? ?? json['id'] as String?;
       if (id == null) return null;
 
-      final loc = json['location'] as Map<String, dynamic>? ?? json['place'] as Map<String, dynamic>?;
+      final loc = json['location'] as Map<String, dynamic>? ?? json['place'] as Map<String, dynamic>? ?? json['incidentLocation'] as Map<String, dynamic>? ?? json['locationWhereItHappened'] as Map<String, dynamic>?;
       if (loc == null) return null;
       final lat = (loc['latitude'] as num?)?.toDouble() ?? (loc['lat'] as num?)?.toDouble();
       final lng = (loc['longitude'] as num?)?.toDouble() ?? (loc['lon'] as num?)?.toDouble() ?? (loc['lng'] as num?)?.toDouble();
@@ -40,14 +48,17 @@ class Interaction {
       final type = json['type'] as Map<String, dynamic>?;
       final typeId = (type?['ID'] as num?)?.toInt() ?? (type?['id'] as num?)?.toInt() ?? 0;
       final typeName = type?['name'] as String? ?? type?['typeName'] as String? ?? '';
+      final reportTypeLabel = _reportTypeLabel(typeId);
 
-      final momentStr = json['moment'] as String?;
+      final momentStr = json['moment'] as String? ?? json['incidentMoment'] as String? ?? json['date'] as String?;
       DateTime? moment;
-      if (momentStr != null) {
-        moment = DateTime.tryParse(momentStr);
-      }
+      if (momentStr != null) moment = DateTime.tryParse(momentStr);
+      final reportedStr = json['momentReported'] as String? ?? json['reportedAt'] as String? ?? json['createdAt'] as String? ?? json['reportMoment'] as String?;
+      DateTime? momentReported;
+      if (reportedStr != null) momentReported = DateTime.tryParse(reportedStr);
 
       final description = json['description'] as String?;
+      final reporterName = json['reporterName'] as String? ?? json['reporter_name'] as String? ?? json['createdBy'] as String? ?? json['userName'] as String? ?? (json['reporter'] as Map<String, dynamic>?)?['name'] as String?;
 
       String? speciesCommonName;
       String? speciesCategory;
@@ -57,12 +68,14 @@ class Interaction {
         return s['commonName'] as String? ?? s['common_name'] as String? ?? s['name'] as String? ?? s['commonNameNL'] as String?;
       }
 
+      List<String>? involvedAnimalNames;
       final sighting = json['reportOfSighting'] as Map<String, dynamic>? ?? json['report_of_sighting'] as Map<String, dynamic>?;
       if (sighting != null) {
         speciesCommonName ??= fromSpecies(sighting['species'] as Map<String, dynamic>?);
         speciesCommonName ??= sighting['speciesCommonName'] as String? ?? sighting['species_common_name'] as String? ?? sighting['commonName'] as String?;
         speciesCategory ??= (sighting['species'] as Map<String, dynamic>?)?['category'] as String? ?? sighting['speciesCategory'] as String?;
         final involved = sighting['involvedAnimals'] as List<dynamic>? ?? sighting['involved_animals'] as List<dynamic>?;
+        involvedAnimalNames = _parseInvolvedAnimalNames(involved);
         final first = involved?.isNotEmpty == true ? involved!.first as Map<String, dynamic>? : null;
         final species = first?['species'] ?? sighting['species'] as Map<String, dynamic>?;
         if (species != null) {
@@ -70,6 +83,14 @@ class Interaction {
           speciesCategory ??= species['category'] as String? ?? species['speciesCategory'] as String?;
         }
         speciesCommonName ??= first?['speciesCommonName'] as String? ?? first?['species_common_name'] as String? ?? first?['commonName'] as String?;
+      }
+      final damageReport = json['reportOfDamage'] as Map<String, dynamic>? ?? json['report_of_damage'] as Map<String, dynamic>?;
+      if (damageReport != null && involvedAnimalNames == null) {
+        involvedAnimalNames = _parseInvolvedAnimalNames(damageReport['involvedAnimals'] as List<dynamic>? ?? damageReport['involved_animals'] as List<dynamic>?);
+      }
+      final collisionReport = json['reportOfAnimalVehicleCollision'] as Map<String, dynamic>? ?? json['report_of_animal_vehicle_collision'] as Map<String, dynamic>?;
+      if (collisionReport != null && involvedAnimalNames == null) {
+        involvedAnimalNames = _parseInvolvedAnimalNames(collisionReport['involvedAnimals'] as List<dynamic>? ?? collisionReport['involved_animals'] as List<dynamic>?);
       }
       speciesCommonName ??= json['speciesCommonName'] as String? ?? json['species_common_name'] as String? ?? json['commonName'] as String?;
       final topSpecies = json['species'] as Map<String, dynamic>?;
@@ -82,12 +103,41 @@ class Interaction {
         typeId: typeId,
         typeName: typeName,
         moment: moment,
+        momentReported: momentReported,
         description: description,
         speciesCommonName: speciesCommonName,
         speciesCategory: speciesCategory,
+        reportTypeLabel: reportTypeLabel,
+        involvedAnimalNames: involvedAnimalNames,
+        reporterName: reporterName,
       );
     } catch (_) {
       return null;
     }
+  }
+
+  static String _reportTypeLabel(int typeId) {
+    switch (typeId) {
+      case interactionTypeSighting:
+        return 'SightingReport';
+      case interactionTypeDamage:
+        return 'DamageReport';
+      case interactionTypeCollision:
+        return 'AnimalVehicleCollisionReport';
+      default:
+        return 'Interaction';
+    }
+  }
+
+  static List<String>? _parseInvolvedAnimalNames(List<dynamic>? involved) {
+    if (involved == null || involved.isEmpty) return null;
+    final names = <String>[];
+    for (final e in involved) {
+      if (e is Map<String, dynamic>) {
+        final name = e['name'] as String? ?? e['commonName'] as String? ?? (e['species'] as Map<String, dynamic>?)?['commonName'] as String? ?? (e['species'] as Map<String, dynamic>?)?['name'] as String?;
+        if (name != null && name.trim().isNotEmpty) names.add(name.trim());
+      }
+    }
+    return names.isEmpty ? null : names;
   }
 }

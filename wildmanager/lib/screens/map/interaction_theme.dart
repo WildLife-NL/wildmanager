@@ -42,6 +42,19 @@ String typeLabelForInteraction(Interaction interaction) {
   }
 }
 
+String typeNameShortForInteraction(Interaction interaction) {
+  switch (interaction.typeId) {
+    case interactionTypeSighting:
+      return 'waarneming';
+    case interactionTypeDamage:
+      return 'schademelding';
+    case interactionTypeCollision:
+      return 'dieraanrijding';
+    default:
+      return interaction.typeName.isNotEmpty ? interaction.typeName.toLowerCase() : 'interactie';
+  }
+}
+
 String formatMoment(DateTime d) {
   return '${d.day.toString().padLeft(2, '0')}-${d.month.toString().padLeft(2, '0')}-${d.year} '
       '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
