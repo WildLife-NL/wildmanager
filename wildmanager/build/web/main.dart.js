@@ -22531,8 +22531,8 @@ r=A.bH(a,B.cI)
 r=r==null?null:r.b
 if(r==null)r=1
 return new A.u6(s,r,A.AR(a),A.cZ(a),b,A.aM())},
-a8s(a,b,c,d,e,f){var s=null
-return new A.Ad(A.aU_(s,s,new A.ye(a,s,e)),b,f,d,s,c,s)},
+a8s(a,b,c,d,e){var s=null
+return new A.Ad(A.aU_(s,s,new A.ye(a,s,s)),b,e,d,s,c,s)},
 Ad:function Ad(a,b,c,d,e,f,g){var _=this
 _.c=a
 _.f=b
@@ -29401,7 +29401,7 @@ aEg(a){var s=A.f7(a," ","_")
 if(B.b.n(B.p9,s))return"assets/icons/animals/"+s+".png"
 return null},
 b_r(){var s,r=A.b([],t.s)
-for(s=0;s<29;++s)r.push("packages/wildlifenl_assets/assets/icons/animals/"+B.p9[s]+".png")
+for(s=0;s<29;++s)r.push("assets/icons/animals/"+B.p9[s]+".png")
 return r},
 aEt(a){var s,r,q,p,o
 if(a==null||B.c.bg(a).length===0)return null
@@ -59613,8 +59613,7 @@ case 2:return A.J(o.at(-1),r)}})
 return A.L($async$uB,r)}}
 A.apW.prototype={}
 A.ye.prototype={
-grY(){var s=this.c,r=this.a
-return s==null?r:"packages/"+s+"/"+r},
+grY(){return this.a},
 x7(a){var s,r={},q=a.a
 if(q==null)q=$.xR()
 r.a=r.b=null
@@ -94253,7 +94252,7 @@ A.a9T.prototype={}
 A.a9M.prototype={}
 A.Nt.prototype={
 K(a){var s,r,q,p,o=null,n=A.bp(a,B.bY,t.w).w.a,m=n.a,l=m>900?m*0.09:m*0.14
-l=A.a8s(this.c,new A.a9K(new A.a9M(a,n)),B.h_,o,o,l)
+l=A.a8s(this.c,new A.a9K(new A.a9M(a,n)),B.h_,o,l)
 s=m>600
 r=A.cg(o,o,8*(s?1.2:1))
 q=s?26:22
@@ -95566,7 +95565,7 @@ s.push(new A.OD(q,1.5,B.dD.kb(0.7)))}return s},
 OQ(a,b){var s,r=A.aEt(a)
 if(r==null)r=a
 s=r!=null&&r.length!==0?A.aEg(r):null
-if(s!=null)return A.a8s(s,new A.asq(b),B.h_,b,"wildlifenl_assets",b)
+if(s!=null)return A.a8s(s,new A.asq(b),B.h_,b,b)
 return A.h2(B.bM,B.j,null,b)},
 P6(a){var s=null
 return A.aa8(A.hE(s,A.dH(B.x,!0,s,A.eR(this.OQ(a.gJU(),22),s,s),B.u,B.dD,2,s,s,B.cR,s,s,B.ap),B.S,!1,s,s,s,s,s,s,s,s,s,s,s,s,s,new A.asu(this,a),s,s,s,s,s,s),36,a.b,36)},
@@ -95585,7 +95584,7 @@ return new A.b_(B.FT,A.e6(A.b([A.h2(b,B.bL,s,20),B.fE,A.eS(A.dd(A.b([A.bj(c,s,s,
 z1(a,b){var s,r=A.aEt(a)
 if(r==null)r=a
 s=r!=null&&r.length!==0?A.aEg(r):null
-if(s!=null)return A.a8s(s,new A.asC(b),B.h_,b,"wildlifenl_assets",b)
+if(s!=null)return A.a8s(s,new A.asC(b),B.h_,b,b)
 return A.h2(B.bM,B.j,null,b)},
 P8(a){var s=null,r=A.tI(a.c),q=$.a0L(),p=a.e
 p=p.length!==0?B.b.ga8(p):s
@@ -95635,7 +95634,7 @@ if(this.Sy(a)){s=a.w
 r=s==null?null:B.c.bg(s)
 if(r!=null&&r.length!==0){q=A.aEt(r)
 p=A.aEg(q==null?r:q)
-if(p!=null)return A.a8s(p,new A.asM(a,b),B.h_,b,"wildlifenl_assets",b)}}return A.h2(A.aLy(a.c),B.j,null,b)},
+if(p!=null)return A.a8s(p,new A.asM(a,b),B.h_,b,b)}}return A.h2(A.aLy(a.c),B.j,null,b)},
 Pb(a){var s=null,r=A.a0p(a.c)
 return A.aa8(A.hE(s,A.dH(B.x,!0,s,A.eR(this.So(a,20),s,s),B.u,r,2,s,s,B.cR,s,s,B.ap),B.S,!1,s,s,s,s,s,s,s,s,s,s,s,s,s,new A.asB(this,a),s,s,s,s,s,s),36,a.b,36)},
 an5(a){var s=A.b0H(a),r=A.a0p(a.c),q=this.Sy(a),p=a.w,o=p==null?null:B.c.bg(p),n=o!=null&&o.length!==0,m=q&&n?o:s,l=q&&n?s:null

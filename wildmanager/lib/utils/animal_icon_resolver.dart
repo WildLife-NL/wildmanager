@@ -47,10 +47,10 @@ String iconNameToAssetFileName(String iconName) {
   return iconName.replaceAll(' ', '_');
 }
 
-/// Basis-pad voor diericonen in package wildlifenl_assets.
+/// Basis-pad voor diericonen (app-eigen assets onder assets/icons/animals/).
 const String animalIconsAssetPath = 'assets/icons/animals';
 
-/// Expliciete lijst van alle diericon-assetpaden (bestandsnaam zonder .png).
+/// Expliciete lijst van alle diericon-bestandsnamen (zonder .png).
 /// Op web release worden dynamische paden soms niet meegenomen; door elke path
 /// hier als literal te zetten, worden alle iconen in de build gebundeld.
 const List<String> animalIconAssetFileNames = [
@@ -85,9 +85,6 @@ const List<String> animalIconAssetFileNames = [
   'wolf',
 ];
 
-/// Package-naam voor diericonen (voor Image.asset en rootBundle).
-const String animalIconsPackage = 'wildlifenl_assets';
-
 /// Geeft het asset-pad voor een icoonnaam, of null als onbekend.
 /// Gebruikt de statische lijst zodat web release alle iconen meeneemt.
 String? getAnimalIconAssetPath(String iconName) {
@@ -98,11 +95,11 @@ String? getAnimalIconAssetPath(String iconName) {
   return null;
 }
 
-/// Volle asset-keys voor preload (packages/...). Zorgt dat web release alle iconen laadt.
+/// Asset-paden voor preload (app-eigen assets). Zorgt dat web release alle iconen laadt.
 List<String> getAllAnimalIconAssetKeys() {
   return [
     for (final f in animalIconAssetFileNames)
-      'packages/$animalIconsPackage/$animalIconsAssetPath/$f.png',
+      '$animalIconsAssetPath/$f.png',
   ];
 }
 
