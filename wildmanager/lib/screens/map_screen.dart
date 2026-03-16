@@ -1838,13 +1838,14 @@ class _MapScreenState extends State<MapScreen> {
                       if (_livingLabs != null) ..._livingLabPolygonLayers(),
                     if (notifier.state.showHeatmap)
                       if (_livingLabs != null) ..._heatmapLayers(),
-                    MarkerLayer(markers: _detectionMarkers()),
-                    MarkerLayer(markers: _interactionMarkers()),
+                    // Animals (and trails) drawn first so detection and interaction icons appear on top
                     if (showAnimals) ...[
                       if (notifier.state.showAnimalPath && _animalTrailPolylines().isNotEmpty)
                         PolylineLayer(polylines: _animalTrailPolylines()),
                       MarkerLayer(markers: _animalMarkers()),
                     ],
+                    MarkerLayer(markers: _interactionMarkers()),
+                    MarkerLayer(markers: _detectionMarkers()),
                   ],
                 );
               },
