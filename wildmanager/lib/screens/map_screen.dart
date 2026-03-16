@@ -723,10 +723,11 @@ class _MapScreenState extends State<MapScreen> {
     for (final entry in trails.entries) {
       final points = entry.value;
       if (points.length < 2) continue;
+      // Magenta trail stands out on green terrain. For dashed line, use StrokePattern.dashed() when on flutter_map v7+.
       polylines.add(Polyline(
         points: points,
-        color: const Color(0xFF2E7D32).withValues(alpha: 0.7),
-        strokeWidth: 1.5,
+        color: mapColorAnimalTrail.withValues(alpha: 0.85),
+        strokeWidth: 2.5,
       ));
     }
     return polylines;
@@ -750,14 +751,19 @@ class _MapScreenState extends State<MapScreen> {
   Marker _buildAnimalMarker(Animal a) {
     return Marker(
       point: a.location,
-      width: 36,
-      height: 36,
+      width: 40,
+      height: 40,
       child: GestureDetector(
         onTap: () => _showAnimalDetail(a),
-        child: Material(
-          color: const Color(0xFF2E7D32),
-          shape: const CircleBorder(),
-          elevation: 2,
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: mapColorAnimal,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: const [
+              BoxShadow(color: Colors.black26, blurRadius: 2, offset: Offset(0, 1)),
+            ],
+          ),
           child: Center(
             child: _animalIconWidget(a.displaySpecies, 22),
           ),
