@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -131,6 +132,10 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
+    // Preload alle diericonen zodat web release ze meeneemt en ze direct beschikbaar zijn.
+    for (final key in getAllAnimalIconAssetKeys()) {
+      rootBundle.load(key);
+    }
     _filterNotifier = context.read<MapFilterNotifier>();
     _filterNotifier!.addListener(_onFilterChanged);
     _filterPanelController = FilterPanelController();
@@ -156,17 +161,7 @@ class _MapScreenState extends State<MapScreen> {
             _loadInteractions();
             _scheduleLoadDetections();
             if (_showAnimalsLayer) _scheduleLoadAnimals();
-            if (!_initialTileRefreshScheduled) {
-              _initialTileRefreshScheduled = true;
-              Future.delayed(const Duration(milliseconds: 200), () {
-                if (!mounted) return;
-                try {
-                  final center = _mapController.camera.center;
-                  final zoom = _mapController.camera.zoom;
-                  _mapController.move(center, zoom);
-                } catch (_) {}
-              });
-            }
+            _scheduleInitialTileRefresh();
           });
         });
 
@@ -183,6 +178,20 @@ class _MapScreenState extends State<MapScreen> {
       final build = info.buildNumber.isNotEmpty ? info.buildNumber : 'dev';
       final isDateVersion = build.length == 8 && int.tryParse(build) != null;
       setState(() => _versionLabel = isDateVersion ? 'v$build' : 'v${info.version} ($build)');
+    });
+  }
+
+  void _scheduleInitialTileRefresh() {
+    if (_initialTileRefreshScheduled) return;
+    _initialTileRefreshScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        final center = _mapController.camera.center;
+        final zoom = _mapController.camera.zoom;
+        _mapController.move(center, zoom);
+        setState(() {});
+      } catch (_) {}
     });
   }
 
@@ -717,8 +726,8 @@ class _MapScreenState extends State<MapScreen> {
 
   Widget _animalIconWidget(String? speciesCommonName, double size) {
     final iconName = resolveSpeciesToIconName(speciesCommonName) ?? speciesCommonName;
-    if (iconName != null && iconName.isNotEmpty) {
-      final path = '$_animalsAssetPath/$iconName.png';
+    final path = iconName != null && iconName.isNotEmpty ? getAnimalIconAssetPath(iconName) : null;
+    if (path != null) {
       return Image.asset(
         path,
         package: _assetsPackage,
@@ -875,12 +884,11 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   static const String _assetsPackage = 'wildlifenl_assets';
-  static const String _animalsAssetPath = 'assets/icons/animals';
 
   Widget _detectionIcon(String? species, {required double size}) {
     final iconName = resolveSpeciesToIconName(species) ?? species;
-    if (iconName != null && iconName.isNotEmpty) {
-      final path = '$_animalsAssetPath/$iconName.png';
+    final path = iconName != null && iconName.isNotEmpty ? getAnimalIconAssetPath(iconName) : null;
+    if (path != null) {
       return Image.asset(
         path,
         package: _assetsPackage,
@@ -992,7 +1000,7 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                 ),
                 title: Text(
-                  d.species != null && d.species!.isNotEmpty ? d.species! : 'Detectie',
+                  _detectionSpeciesTitle(d),
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
                 subtitle: Text(
@@ -1010,6 +1018,15 @@ class _MapScreenState extends State<MapScreen> {
         ),
       ),
     );
+  }
+
+  String _detectionSpeciesTitle(Detection d) {
+    final names = d.animals
+        .map((a) => a.species ?? a.speciesCategory ?? '')
+        .where((s) => s.trim().isNotEmpty)
+        .toList();
+    if (names.isEmpty) return 'Detectie';
+    return names.join(', ');
   }
 
   void _showDetectionDetail(Detection d) {
@@ -1043,9 +1060,7 @@ class _MapScreenState extends State<MapScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          d.species != null && d.species!.isNotEmpty
-                              ? d.species!
-                              : 'Detectie',
+                          _detectionSpeciesTitle(d),
                           style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 2),
@@ -1061,19 +1076,34 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              if (d.speciesCategory != null && d.speciesCategory!.trim().isNotEmpty)
-                _detailRow(ctx, Icons.category, 'Categorie', d.speciesCategory!),
-              if (d.sex != null && d.sex!.trim().isNotEmpty)
-                _detailRow(ctx, Icons.wc, 'Geslacht', _detectionSexLabel(d.sex!)),
-              if (d.condition != null && d.condition!.trim().isNotEmpty)
-                _detailRow(ctx, Icons.favorite, 'Conditie', _detectionConditionLabel(d.condition!)),
-              if (d.lifeStage != null && d.lifeStage!.trim().isNotEmpty)
-                _detailRow(ctx, Icons.cake, 'Levensfase', _detectionLifeStageLabel(d.lifeStage!)),
-              if (d.behaviour != null && d.behaviour!.trim().isNotEmpty)
-                _detailRow(ctx, Icons.pets, 'Gedrag', d.behaviour!),
-              if (d.confidence != null)
-                _detailRow(ctx, Icons.percent, 'Betrouwbaarheid', '${d.confidence}%'),
-              if (d.description != null && d.description!.trim().isNotEmpty)
+              ...d.animals.expand((a) {
+                final lines = <Widget>[
+                  if (a.species != null && a.species!.trim().isNotEmpty ||
+                      a.speciesCategory != null && a.speciesCategory!.trim().isNotEmpty) ...[
+                    _detailRow(
+                      ctx,
+                      Icons.pets,
+                      'Dier',
+                      [a.species, a.speciesCategory].whereType<String>().where((s) => s.trim().isNotEmpty).join(' • '),
+                    ),
+                  ],
+                  if (a.sex != null && a.sex!.trim().isNotEmpty)
+                    _detailRow(ctx, Icons.wc, 'Geslacht', _detectionSexLabel(a.sex!)),
+                  if (a.condition != null && a.condition!.trim().isNotEmpty)
+                    _detailRow(ctx, Icons.favorite, 'Conditie', _detectionConditionLabel(a.condition!)),
+                  if (a.lifeStage != null && a.lifeStage!.trim().isNotEmpty)
+                    _detailRow(ctx, Icons.cake, 'Levensfase', _detectionLifeStageLabel(a.lifeStage!)),
+                  if (a.behaviour != null && a.behaviour!.trim().isNotEmpty)
+                    _detailRow(ctx, Icons.pets, 'Gedrag', a.behaviour!),
+                  if (a.confidence != null)
+                    _detailRow(ctx, Icons.percent, 'Betrouwbaarheid', '${a.confidence}%'),
+                  if (a.description != null && a.description!.trim().isNotEmpty)
+                    _detailRow(ctx, Icons.description, 'Beschrijving', a.description!),
+                ];
+                return lines;
+              }),
+              if (d.description != null && d.description!.trim().isNotEmpty &&
+                  (d.animals.isEmpty || d.animals.every((a) => a.description == null || a.description!.trim().isEmpty)))
                 _detailRow(ctx, Icons.description, 'Beschrijving', d.description!),
               if (d.deploymentID != null && d.deploymentID!.trim().isNotEmpty)
                 _detailRow(ctx, Icons.sensors, 'Deployment', d.deploymentID!),
@@ -1157,18 +1187,20 @@ class _MapScreenState extends State<MapScreen> {
       final name = i.speciesCommonName?.trim();
       if (name != null && name.isNotEmpty) {
         final iconName = resolveSpeciesToIconName(name) ?? name;
-        final path = '$_animalsAssetPath/$iconName.png';
-        return Image.asset(
-          path,
-          package: _assetsPackage,
-          width: size,
-          height: size,
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) {
-            if (kDebugMode) debugPrint('[Waarneming icoon] Laden mislukt: $path (soort: $name)');
-            return Icon(iconForInteractionType(i.typeId), color: Colors.white, size: size);
-          },
-        );
+        final path = getAnimalIconAssetPath(iconName);
+        if (path != null) {
+          return Image.asset(
+            path,
+            package: _assetsPackage,
+            width: size,
+            height: size,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) {
+              if (kDebugMode) debugPrint('[Waarneming icoon] Laden mislukt: $path (soort: $name)');
+              return Icon(iconForInteractionType(i.typeId), color: Colors.white, size: size);
+            },
+          );
+        }
       }
     }
     return Icon(iconForInteractionType(i.typeId), color: Colors.white, size: size);
