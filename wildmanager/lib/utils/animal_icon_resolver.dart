@@ -41,18 +41,17 @@ const Map<String, String> _speciesNameAliases = {
   'tauros': 'taurus',
 };
 
-/// Bestandsnaam voor asset (zonder spaties) voor Flutter Web compatibility.
-/// Flutter Web encodeert spaties in asset-URLs dubbel, wat 404 geeft in release builds.
 String iconNameToAssetFileName(String iconName) {
   return iconName.replaceAll(' ', '_');
 }
 
-/// Basis-pad voor diericonen (app-eigen assets onder assets/icons/animals/).
+String _capitalizeFileName(String name) {
+  if (name.isEmpty) return name;
+  return name[0].toUpperCase() + name.substring(1);
+}
+
 const String animalIconsAssetPath = 'assets/icons/animals';
 
-/// Expliciete lijst van alle diericon-bestandsnamen (zonder .png).
-/// Op web release worden dynamische paden soms niet meegenomen; door elke path
-/// hier als literal te zetten, worden alle iconen in de build gebundeld.
 const List<String> animalIconAssetFileNames = [
   'bever',
   'boommarter',
@@ -85,21 +84,18 @@ const List<String> animalIconAssetFileNames = [
   'wolf',
 ];
 
-/// Geeft het asset-pad voor een icoonnaam, of null als onbekend.
-/// Gebruikt de statische lijst zodat web release alle iconen meeneemt.
 String? getAnimalIconAssetPath(String iconName) {
   final fileName = iconNameToAssetFileName(iconName);
   if (animalIconAssetFileNames.contains(fileName)) {
-    return '$animalIconsAssetPath/$fileName.png';
+    return '$animalIconsAssetPath/${_capitalizeFileName(fileName)}.png';
   }
   return null;
 }
 
-/// Asset-paden voor preload (app-eigen assets). Zorgt dat web release alle iconen laadt.
 List<String> getAllAnimalIconAssetKeys() {
   return [
     for (final f in animalIconAssetFileNames)
-      '$animalIconsAssetPath/$f.png',
+      '$animalIconsAssetPath/${_capitalizeFileName(f)}.png',
   ];
 }
 
