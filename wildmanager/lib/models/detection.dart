@@ -25,25 +25,40 @@ class DetectionAnimal {
 
   static DetectionAnimal? _fromJson(dynamic json) {
     if (json is! Map<String, dynamic>) return null;
+    final data = json['animal'] is Map<String, dynamic>
+        ? {...json, ...(json['animal'] as Map<String, dynamic>)}
+        : json;
     String? species;
     String? speciesCategory;
-    final speciesObj = json['species'];
+    final speciesObj = data['species'];
     if (speciesObj is Map<String, dynamic>) {
-      species = speciesObj['commonName'] as String? ?? speciesObj['name'] as String?;
-      speciesCategory = speciesObj['category'] as String?;
+      species = speciesObj['commonName'] as String? ??
+          speciesObj['common_name'] as String? ??
+          speciesObj['name'] as String? ??
+          speciesObj['vernacularName'] as String?;
+      speciesCategory = speciesObj['category'] as String? ?? speciesObj['scientificName'] as String?;
     } else if (speciesObj is String) {
       species = speciesObj;
     }
-    species ??= json['animal_species'] as String?;
+    species ??= data['animal_species'] as String? ??
+        data['commonName'] as String? ??
+        data['common_name'] as String? ??
+        data['speciesCommonName'] as String? ??
+        data['species_common_name'] as String? ??
+        data['speciesName'] as String? ??
+        data['vernacularName'] as String? ??
+        data['name'] as String? ??
+        data['label'] as String? ??
+        data['type'] as String?;
     return DetectionAnimal(
       species: species,
       speciesCategory: speciesCategory,
-      sex: json['sex'] as String?,
-      condition: json['condition'] as String?,
-      lifeStage: json['lifeStage'] as String?,
-      behaviour: json['behaviour'] as String?,
-      confidence: (json['confidence'] as num?)?.toInt(),
-      description: json['description'] as String?,
+      sex: data['sex'] as String?,
+      condition: data['condition'] as String?,
+      lifeStage: data['lifeStage'] as String?,
+      behaviour: data['behaviour'] as String?,
+      confidence: (data['confidence'] as num?)?.toInt(),
+      description: data['description'] as String?,
     );
   }
 }
@@ -58,6 +73,7 @@ class Detection {
     this.deploymentID,
     this.userName,
     this.description,
+    this.animalCount,
   });
 
   final String id;
@@ -68,8 +84,8 @@ class Detection {
   final List<DetectionAnimal> animals;
   final String? deploymentID;
   final String? userName;
-  /// Top-level beschrijving (als geen dier-niveau beschrijving).
   final String? description;
+  final int? animalCount;
 
   /// Eerste dier – voor backward compatibility en marker-icoon.
   DetectionAnimal? get firstAnimal =>
@@ -103,49 +119,63 @@ class Detection {
     final momentStr = json['start'] as String? ?? json['end'] as String? ?? json['moment'] as String?;
     final moment = momentStr != null ? DateTime.tryParse(momentStr) : null;
 
+    String? detectionSpecies;
+    String? detectionSpeciesCategory;
+    final speciesObj = json['species'];
+    if (speciesObj is Map<String, dynamic>) {
+      detectionSpecies = speciesObj['commonName'] as String? ?? speciesObj['common_name'] as String?;
+      detectionSpeciesCategory = speciesObj['name'] as String? ?? speciesObj['category'] as String? ?? speciesObj['scientificName'] as String?;
+    } else if (speciesObj is String) {
+      detectionSpecies = speciesObj;
+    }
+
     final animalsRaw = json['animals'] as List<dynamic>?;
     final animals = <DetectionAnimal>[];
     if (animalsRaw != null && animalsRaw.isNotEmpty) {
       for (final a in animalsRaw) {
         final animal = DetectionAnimal._fromJson(a);
-        if (animal != null && (animal.species != null || animal.speciesCategory != null)) {
-          animals.add(animal);
+        if (animal != null) {
+          final species = animal.species ?? detectionSpecies;
+          final speciesCategory = animal.speciesCategory ?? detectionSpeciesCategory;
+          animals.add(DetectionAnimal(
+            species: species,
+            speciesCategory: speciesCategory,
+            sex: animal.sex,
+            condition: animal.condition,
+            lifeStage: animal.lifeStage,
+            behaviour: animal.behaviour,
+            confidence: animal.confidence,
+            description: animal.description,
+          ));
         }
       }
     }
     String? fallbackDescription = json['description'] as String?;
     if (animals.isEmpty) {
-      // Geen animals-array: één dier uit top-level velden.
-      String? species;
-      String? speciesCategory;
-      final speciesObj = json['species'];
-      if (speciesObj is Map<String, dynamic>) {
-        species = speciesObj['commonName'] as String? ?? speciesObj['name'] as String?;
-        speciesCategory = speciesObj['category'] as String?;
-      } else if (speciesObj is String) {
-        species = speciesObj;
-      }
-      species ??= json['animal_species'] as String?;
       final firstMap = animalsRaw != null &&
               animalsRaw.isNotEmpty &&
               animalsRaw.first is Map<String, dynamic>
           ? animalsRaw.first as Map<String, dynamic>
           : null;
+      final data = firstMap ?? json;
       animals.add(DetectionAnimal(
-        species: species,
-        speciesCategory: speciesCategory,
-        sex: firstMap?['sex'] as String?,
-        condition: firstMap?['condition'] as String?,
-        lifeStage: firstMap?['lifeStage'] as String?,
-        behaviour: firstMap?['behaviour'] as String?,
-        confidence: (firstMap?['confidence'] as num?)?.toInt(),
-        description: firstMap?['description'] as String? ?? fallbackDescription,
+        species: detectionSpecies,
+        speciesCategory: detectionSpeciesCategory,
+        sex: data['sex'] as String?,
+        condition: data['condition'] as String?,
+        lifeStage: data['lifeStage'] as String?,
+        behaviour: data['behaviour'] as String?,
+        confidence: (data['confidence'] as num?)?.toInt(),
+        description: data['description'] as String? ?? fallbackDescription,
       ));
     }
 
     final deploymentID = json['deploymentID'] as String? ?? json['deployment_id'] as String?;
     final user = json['user'] as Map<String, dynamic>?;
     final userName = user?['name'] as String?;
+    final animalCount = (json['animalCount'] as num?)?.toInt() ??
+        (json['animal_count'] as num?)?.toInt() ??
+        (json['count'] as num?)?.toInt();
 
     return Detection(
       id: id,
@@ -156,6 +186,7 @@ class Detection {
       deploymentID: deploymentID,
       userName: userName,
       description: fallbackDescription,
+      animalCount: animalCount,
     );
   }
 }

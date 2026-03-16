@@ -766,15 +766,54 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  String _animalSpeciesDisplay(String? speciesCommonName, String? speciesLatinName) {
-    final common = speciesCommonName?.trim();
-    final latin = speciesLatinName?.trim();
-    if (common != null && common.isNotEmpty) {
-      if (latin != null && latin.isNotEmpty) return '$common ($latin)';
-      return common;
+  Widget _speciesDisplayWidget(BuildContext ctx, String? common, String? latin, {TextStyle? textStyle}) {
+    final c = common?.trim();
+    final l = latin?.trim();
+    final style = textStyle ?? TextStyle(fontSize: 14, color: Colors.grey.shade800);
+    if (c != null && c.isNotEmpty) {
+      if (l != null && l.isNotEmpty) {
+        return Text.rich(
+          TextSpan(
+            style: style,
+            children: [
+              TextSpan(text: c),
+              TextSpan(text: ' ($l)', style: style.copyWith(fontStyle: FontStyle.italic)),
+            ],
+          ),
+        );
+      }
+      return Text(c, style: style);
     }
-    if (latin != null && latin.isNotEmpty) return latin;
-    return '—';
+    if (l != null && l.isNotEmpty) {
+      return Text(l, style: style.copyWith(fontStyle: FontStyle.italic));
+    }
+    return Text('—', style: style);
+  }
+
+  Widget _detailRowWithChild(BuildContext context, IconData icon, String label, Widget valueChild) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Colors.grey.shade600),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 2),
+                valueChild,
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _animalLocationDisplay(LatLng location, DateTime? locationTimestamp) {
@@ -840,11 +879,11 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              _detailRow(
+              _detailRowWithChild(
                 ctx,
                 Icons.science,
                 'Soort',
-                _animalSpeciesDisplay(a.speciesCommonName, a.speciesLatinName),
+                _speciesDisplayWidget(ctx, a.speciesCommonName, a.speciesLatinName),
               ),
               _detailRow(
                 ctx,
@@ -916,7 +955,7 @@ class _MapScreenState extends State<MapScreen> {
       width: 32,
       height: 32,
       child: GestureDetector(
-        onTap: () => _showDetectionDetail(d),
+        onTap: () => _showDetectionAnimalPicker(d),
         child: Material(
           color: d.type.color,
           shape: _detectionMarkerShape,
@@ -1008,13 +1047,36 @@ class _MapScreenState extends State<MapScreen> {
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
                 subtitle: Text(
-                  _detectionTypeLabel(d.type) +
-                      (d.moment != null ? ' · ${formatMoment(d.moment!)}' : ''),
+                  _detectionClusterSubtitle(d),
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: d.type.color,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${_displayedAnimalCount(d)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right, color: Colors.grey),
+                  ],
                 ),
                 onTap: () {
                   Navigator.of(ctx).pop();
-                  _showDetectionDetail(d);
+                  _showDetectionAnimalPicker(d);
                 },
               )),
             ],
@@ -1024,23 +1086,43 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  String _detectionSpeciesTitle(Detection d) {
-    final names = d.animals
-        .map((a) => a.species ?? a.speciesCategory ?? '')
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
-    if (names.isEmpty) return 'Detectie';
-    return names.join(', ');
+  int _displayedAnimalCount(Detection d) {
+    return d.animalCount ?? d.animals.length;
   }
 
-  void _showDetectionDetail(Detection d) {
+  String _detectionClusterSubtitle(Detection d) {
+    final typeStr = _detectionTypeLabel(d.type);
+    final timeStr = d.moment != null ? formatMoment(d.moment!) : null;
+    return [typeStr, if (timeStr != null) timeStr].join(' · ');
+  }
+
+  String _detectionSpeciesTitle(Detection d) {
+    final seen = <String>{};
+    final unique = d.animals
+        .map((a) => a.species ?? a.speciesCategory ?? '')
+        .where((s) => s.trim().isNotEmpty)
+        .where((s) => seen.add(s))
+        .toList();
+    if (unique.isNotEmpty) return unique.join(', ');
+    return d.species?.trim().isNotEmpty == true
+        ? d.species!
+        : d.speciesCategory?.trim().isNotEmpty == true
+            ? d.speciesCategory!
+            : 'Detectie';
+  }
+
+  void _showDetectionAnimalPicker(Detection d) {
+    final count = _displayedAnimalCount(d);
+    final list = <DetectionAnimal>[];
+    for (var i = 0; i < d.animals.length; i++) list.add(d.animals[i]);
+    while (list.length < count) list.add(const DetectionAnimal());
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.4,
+        initialChildSize: 0.55,
         minChildSize: 0.25,
-        maxChildSize: 0.7,
+        maxChildSize: 0.9,
         expand: false,
         builder: (ctx, scrollController) => Padding(
           padding: const EdgeInsets.all(20),
@@ -1048,8 +1130,13 @@ class _MapScreenState extends State<MapScreen> {
             controller: scrollController,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  ),
                   Material(
                     color: d.type.color,
                     shape: _detectionMarkerShape,
@@ -1063,59 +1150,175 @@ class _MapScreenState extends State<MapScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        _speciesDisplayWidget(
+                          ctx,
                           _detectionSpeciesTitle(d),
-                          style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _detectionTypeLabel(d.type),
-                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey.shade600,
+                          d.speciesCategory?.trim().isNotEmpty == true
+                              ? d.speciesCategory
+                              : d.animals.isNotEmpty
+                                  ? (d.animals.first.speciesCategory?.trim().isNotEmpty == true
+                                      ? d.animals.first.speciesCategory
+                                      : null)
+                                  : null,
+                          textStyle: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade800,
                               ),
                         ),
+                        if (d.moment != null)
+                          Text(
+                            '${_detectionTypeLabel(d.type)} · ${formatMoment(d.moment!)}',
+                            style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                          ),
                       ],
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              ...d.animals.expand((a) {
-                final lines = <Widget>[
-                  if (a.species != null && a.species!.trim().isNotEmpty ||
-                      a.speciesCategory != null && a.speciesCategory!.trim().isNotEmpty) ...[
-                    _detailRow(
-                      ctx,
-                      Icons.pets,
-                      'Dier',
-                      [a.species, a.speciesCategory].whereType<String>().where((s) => s.trim().isNotEmpty).join(' • '),
+              Text(
+                'Groepssamenstelling',
+                style: Theme.of(ctx).textTheme.titleSmall?.copyWith(
+                      color: Colors.grey.shade700,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                  if (a.sex != null && a.sex!.trim().isNotEmpty)
-                    _detailRow(ctx, Icons.wc, 'Geslacht', _detectionSexLabel(a.sex!)),
-                  if (a.condition != null && a.condition!.trim().isNotEmpty)
-                    _detailRow(ctx, Icons.favorite, 'Conditie', _detectionConditionLabel(a.condition!)),
-                  if (a.lifeStage != null && a.lifeStage!.trim().isNotEmpty)
-                    _detailRow(ctx, Icons.cake, 'Levensfase', _detectionLifeStageLabel(a.lifeStage!)),
-                  if (a.behaviour != null && a.behaviour!.trim().isNotEmpty)
-                    _detailRow(ctx, Icons.pets, 'Gedrag', a.behaviour!),
-                  if (a.confidence != null)
-                    _detailRow(ctx, Icons.percent, 'Betrouwbaarheid', '${a.confidence}%'),
-                  if (a.description != null && a.description!.trim().isNotEmpty)
-                    _detailRow(ctx, Icons.description, 'Beschrijving', a.description!),
-                ];
-                return lines;
+              ),
+              const SizedBox(height: 10),
+              ...List.generate(list.length, (i) {
+                final a = list[i];
+                final compactLine = _detectionAnimalCompactLine(a);
+                final hasBehaviour = a.behaviour != null && a.behaviour!.trim().isNotEmpty;
+                final hasDescription = a.description != null && a.description!.trim().isNotEmpty;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Material(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      onTap: () => _showDetectionAnimalDetail(d, a),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (compactLine.isNotEmpty)
+                              Text(
+                                compactLine,
+                                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey.shade700,
+                                      fontSize: 13,
+                                    ),
+                              )
+                            else if (!hasBehaviour && !hasDescription)
+                              Text(
+                                '—',
+                                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey.shade500,
+                                      fontSize: 13,
+                                    ),
+                              ),
+                            if (hasBehaviour) ...[
+                              if (compactLine.isNotEmpty) const SizedBox(height: 6),
+                              Text(
+                                a.behaviour!,
+                                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 12,
+                                    ),
+                                maxLines: 10,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                            if (hasDescription) ...[
+                              if (compactLine.isNotEmpty || hasBehaviour) const SizedBox(height: 6),
+                              Text(
+                                a.description!,
+                                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 12,
+                                    ),
+                                maxLines: 10,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
               }),
-              if (d.description != null && d.description!.trim().isNotEmpty &&
-                  (d.animals.isEmpty || d.animals.every((a) => a.description == null || a.description!.trim().isEmpty)))
-                _detailRow(ctx, Icons.description, 'Beschrijving', d.description!),
-              if (d.deploymentID != null && d.deploymentID!.trim().isNotEmpty)
-                _detailRow(ctx, Icons.sensors, 'Deployment', d.deploymentID!),
-              if (d.userName != null && d.userName!.trim().isNotEmpty)
-                _detailRow(ctx, Icons.person, 'Sensor eigenaar', d.userName!),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDetectionAnimalDetail(Detection d, DetectionAnimal a) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.45,
+        minChildSize: 0.25,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (ctx, scrollController) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: ListView(
+            controller: scrollController,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  ),
+                  Material(
+                    color: d.type.color,
+                    shape: _detectionMarkerShape,
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: _detectionIcon(a.species ?? d.species, size: 28),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _speciesDisplayWidget(ctx, a.species ?? d.species, a.speciesCategory ?? d.speciesCategory),
+                        const SizedBox(height: 4),
+                        Text(
+                          _detectionTypeLabel(d.type),
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              if (a.sex != null && a.sex!.trim().isNotEmpty)
+                _detailRow(ctx, Icons.wc, 'Geslacht', _detectionSexLabel(a.sex!)),
+              if (a.condition != null && a.condition!.trim().isNotEmpty)
+                _detailRow(ctx, Icons.favorite, 'Conditie', _detectionConditionLabel(a.condition!)),
+              if (a.lifeStage != null && a.lifeStage!.trim().isNotEmpty)
+                _detailRow(ctx, Icons.cake, 'Levensfase', _detectionLifeStageLabel(a.lifeStage!)),
+              if (a.behaviour != null && a.behaviour!.trim().isNotEmpty)
+                _detailRow(ctx, Icons.pets, 'Gedrag', a.behaviour!),
+              if (a.confidence != null)
+                _detailRow(ctx, Icons.percent, 'Detectiezekerheid', '${a.confidence}%'),
+              if (a.description != null && a.description!.trim().isNotEmpty)
+                _detailRow(ctx, Icons.description, 'Beschrijving', a.description!),
+              const SizedBox(height: 16),
               if (d.moment != null)
-                _detailRow(ctx, Icons.schedule, 'Tijdstip', formatMoment(d.moment!)),
-              const SizedBox(height: 12),
+                _detailRow(ctx, Icons.schedule, 'Tijdstip detectie', formatMoment(d.moment!)),
               _detailRow(ctx, Icons.tag, 'ID', d.id),
               _detailRow(
                 ctx,
@@ -1128,6 +1331,16 @@ class _MapScreenState extends State<MapScreen> {
         ),
       ),
     );
+  }
+
+  /// Eén regel voor geslacht, levensfase, conditie, betrouwbaarheid (voor groepsoverzicht).
+  String _detectionAnimalCompactLine(DetectionAnimal a) {
+    final parts = <String>[];
+    if (a.sex != null && a.sex!.trim().isNotEmpty) parts.add(_detectionSexLabel(a.sex!));
+    if (a.lifeStage != null && a.lifeStage!.trim().isNotEmpty) parts.add(_detectionLifeStageLabel(a.lifeStage!));
+    if (a.condition != null && a.condition!.trim().isNotEmpty) parts.add(_detectionConditionLabel(a.condition!));
+    if (a.confidence != null) parts.add('${a.confidence}% detectiezekerheid');
+    return parts.join(' · ');
   }
 
   String _detectionTypeLabel(DetectionType t) {
@@ -1159,7 +1372,7 @@ class _MapScreenState extends State<MapScreen> {
       case 'healthy':
         return 'Gezond';
       case 'impaired':
-        return 'Verminderd';
+        return 'Gewond';
       case 'dead':
         return 'Dood';
       default:
@@ -1187,7 +1400,8 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _interactionIcon(Interaction i, {required double size}) {
-    if (_isSighting(i)) {
+    final useAnimalIcon = _isSighting(i) || i.typeId == interactionTypeCollision;
+    if (useAnimalIcon) {
       final name = i.speciesCommonName?.trim();
       if (name != null && name.isNotEmpty) {
         final iconName = resolveSpeciesToIconName(name) ?? name;
@@ -1199,7 +1413,7 @@ class _MapScreenState extends State<MapScreen> {
             height: size,
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) {
-              if (kDebugMode) debugPrint('[Waarneming icoon] Laden mislukt: $path (soort: $name)');
+              if (kDebugMode) debugPrint('[Interaction icoon] Laden mislukt: $path (soort: $name)');
               return Icon(iconForInteractionType(i.typeId), color: Colors.white, size: size);
             },
           );
@@ -1229,21 +1443,57 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  static String _interactionIntensityOrUrgencyLabel(String value) {
+    switch (value.toLowerCase()) {
+      case 'high':
+        return 'Hoog';
+      case 'medium':
+        return 'Gemiddeld';
+      case 'low':
+        return 'Laag';
+      default:
+        return value;
+    }
+  }
+
+  static String _interactionImpactTypeLabel(String value) {
+    switch (value.toLowerCase()) {
+      case 'square-meters':
+        return 'm²';
+      case 'units':
+        return 'stuks';
+      default:
+        return value;
+    }
+  }
+
   void _showInteractionDetail(Interaction interaction) {
-    final typeLabel = typeLabelForInteraction(interaction);
     final typeColor = colorForInteractionType(interaction.typeId);
-    final isSighting = _isSighting(interaction);
-    final speciesName = interaction.speciesCommonName?.trim();
-    final hasSpecies = speciesName != null && speciesName.isNotEmpty;
-    final title = isSighting && hasSpecies ? speciesName : typeLabel;
-    final subtitle = isSighting && hasSpecies ? typeLabel : null;
+    final hasSpecies = interaction.speciesCommonName?.trim().isNotEmpty == true ||
+        interaction.speciesCategory?.trim().isNotEmpty == true;
+    final isSighting = interaction.typeId == interactionTypeSighting;
+    final isDamage = interaction.typeId == interactionTypeDamage;
+    final isCollision = interaction.typeId == interactionTypeCollision;
+    final rawAnimals = interaction.involvedAnimals ?? interaction.involvedAnimalNames
+        ?.map((name) => InvolvedAnimal(displayName: name)).toList();
+    final listAnimals = rawAnimals
+        ?.where((a) =>
+            (a.speciesCommonName != null && a.speciesCommonName!.trim().isNotEmpty) ||
+            (a.speciesLatinName != null && a.speciesLatinName!.trim().isNotEmpty) ||
+            (a.displayName != null && a.displayName!.trim().isNotEmpty) ||
+            (a.sex != null && a.sex!.trim().isNotEmpty) ||
+            (a.lifeStage != null && a.lifeStage!.trim().isNotEmpty) ||
+            (a.behaviour != null && a.behaviour!.trim().isNotEmpty) ||
+            (a.description != null && a.description!.trim().isNotEmpty))
+        .toList();
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.4,
+        initialChildSize: 0.5,
         minChildSize: 0.25,
-        maxChildSize: 0.7,
+        maxChildSize: 0.9,
         expand: false,
         builder: (ctx, scrollController) => Padding(
           padding: const EdgeInsets.all(20),
@@ -1251,8 +1501,13 @@ class _MapScreenState extends State<MapScreen> {
             controller: scrollController,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  ),
                   Material(
                     color: typeColor,
                     shape: const CircleBorder(),
@@ -1266,63 +1521,254 @@ class _MapScreenState extends State<MapScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          title,
-                          style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        if (subtitle != null) ...[
-                          const SizedBox(height: 2),
+                        if (hasSpecies)
+                          _speciesDisplayWidget(
+                            ctx,
+                            interaction.speciesCommonName?.trim().isNotEmpty == true
+                                ? interaction.speciesCommonName
+                                : (interaction.speciesCategory?.trim().isEmpty ?? true ? 'Onbekend' : null),
+                            interaction.speciesLatinName?.trim().isNotEmpty == true
+                                ? interaction.speciesLatinName
+                                : (interaction.speciesCategory?.trim().isNotEmpty == true ? interaction.speciesCategory : null),
+                            textStyle: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey.shade800,
+                                ),
+                          )
+                        else
                           Text(
-                            subtitle,
-                            style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                                  color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                            typeNameShortForInteraction(interaction),
+                            style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey.shade800,
                                 ),
                           ),
-                        ],
+                        Text(
+                          hasSpecies
+                              ? [
+                                  typeNameShortForInteraction(interaction),
+                                  if (interaction.moment != null) formatMoment(interaction.moment!),
+                                ].join(' · ')
+                              : (interaction.moment != null ? formatMoment(interaction.moment!) : ''),
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                        ),
                       ],
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              if (interaction.reportTypeLabel != null && interaction.reportTypeLabel!.isNotEmpty)
-                _detailRow(ctx, Icons.assignment, 'Rapporttype', interaction.reportTypeLabel!),
-              _detailRow(ctx, Icons.category, 'Type', typeNameShortForInteraction(interaction)),
-              if (isSighting)
-                _detailRow(
-                  ctx,
-                  Icons.pets,
-                  'Dier',
-                  hasSpecies
-                      ? (interaction.speciesCategory != null && interaction.speciesCategory!.isNotEmpty
-                          ? '$speciesName (${interaction.speciesCategory})'
-                          : speciesName)
-                      : (interaction.speciesCategory ?? 'Onbekend'),
+
+              if (isSighting) ...[
+                if (interaction.momentReported != null)
+                  _detailRow(ctx, Icons.schedule, 'Gemeld op', formatMoment(interaction.momentReported!)),
+                if (interaction.moment != null)
+                  _detailRow(ctx, Icons.event, 'Gebeurd op', formatMoment(interaction.moment!)),
+                if (interaction.reporterName != null && interaction.reporterName!.trim().isNotEmpty)
+                  _detailRow(ctx, Icons.person, 'Gemeld door', interaction.reporterName!),
+                if (interaction.description != null && interaction.description!.trim().isNotEmpty)
+                  _detailRow(ctx, Icons.description, 'Beschrijving', interaction.description!),
+                if (interaction.typeDescription != null && interaction.typeDescription!.trim().isNotEmpty)
+                  _detailRow(ctx, Icons.info_outline, 'Type', interaction.typeDescription!),
+                if (interaction.speciesBehaviour != null && interaction.speciesBehaviour!.trim().isNotEmpty)
+                  _detailRow(ctx, Icons.pets, 'Gedrag', interaction.speciesBehaviour!),
+                if (interaction.speciesDescription != null && interaction.speciesDescription!.trim().isNotEmpty)
+                  _detailRow(ctx, Icons.info_outline, 'Beschrijving soort', interaction.speciesDescription!),
+                if (interaction.speciesAdvice != null && interaction.speciesAdvice!.trim().isNotEmpty)
+                  _detailRow(ctx, Icons.lightbulb_outline, 'Advies', interaction.speciesAdvice!),
+                if (interaction.speciesRoleInNature != null && interaction.speciesRoleInNature!.trim().isNotEmpty)
+                  _detailRow(ctx, Icons.eco, 'Rol in de natuur', interaction.speciesRoleInNature!),
+                if (rawAnimals != null && rawAnimals.isNotEmpty)
+                  _detailRow(ctx, Icons.numbers, 'Aantal', '${rawAnimals.length}'),
+                const SizedBox(height: 8),
+              ],
+
+              if (rawAnimals != null && rawAnimals.isNotEmpty) ...[
+                Text(
+                  'Betrokken dieren',
+                  style: Theme.of(ctx).textTheme.titleSmall?.copyWith(
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
-              if (interaction.involvedAnimalNames != null && interaction.involvedAnimalNames!.isNotEmpty)
-                _detailRow(ctx, Icons.pets, 'Betrokken dieren', interaction.involvedAnimalNames!.join(', ')),
-              if (interaction.reporterName != null && interaction.reporterName!.trim().isNotEmpty)
-                _detailRow(ctx, Icons.person, 'Gemeld door', interaction.reporterName!),
-              if (interaction.momentReported != null)
-                _detailRow(ctx, Icons.schedule, 'Gemeld op', formatMoment(interaction.momentReported!)),
-              if (interaction.moment != null)
-                _detailRow(ctx, Icons.event, 'Gebeurd op', formatMoment(interaction.moment!)),
-              if (interaction.description != null && interaction.description!.isNotEmpty)
-                _detailRow(ctx, Icons.description, 'Beschrijving', interaction.description!),
-              if (!isSighting && interaction.speciesCommonName != null && interaction.speciesCommonName!.isNotEmpty)
-                _detailRow(
-                  ctx,
-                  Icons.pets,
-                  'Soort',
-                  interaction.speciesCategory != null && interaction.speciesCategory!.isNotEmpty
-                      ? '${interaction.speciesCommonName} (${interaction.speciesCategory})'
-                      : interaction.speciesCommonName!,
+                const SizedBox(height: 10),
+                if (listAnimals != null && listAnimals.isNotEmpty)
+                  ...listAnimals.map((a) {
+                  final hasSpeciesLine = (a.speciesCommonName != null && a.speciesCommonName!.trim().isNotEmpty) ||
+                      (a.speciesLatinName != null && a.speciesLatinName!.trim().isNotEmpty);
+                  final showName = a.displayName != null && a.displayName!.trim().isNotEmpty &&
+                      (!hasSpeciesLine || a.displayName != a.speciesCommonName);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Material(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (hasSpeciesLine)
+                              _speciesDisplayWidget(
+                                ctx,
+                                a.speciesCommonName ?? (a.displayName?.trim().isEmpty ?? true ? null : a.displayName),
+                                a.speciesLatinName,
+                                textStyle: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade800,
+                                ),
+                              )
+                            else if (showName)
+                              Text(
+                                a.displayName!,
+                                style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                                      color: Colors.grey.shade800,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            if (a.sex != null && a.sex!.trim().isNotEmpty) ...[
+                              if (hasSpeciesLine || showName) const SizedBox(height: 4),
+                              Text(
+                                'Geslacht: ${_detectionSexLabel(a.sex!)}',
+                                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey.shade700,
+                                      fontSize: 13,
+                                    ),
+                              ),
+                            ],
+                            if (a.lifeStage != null && a.lifeStage!.trim().isNotEmpty) ...[
+                              if (hasSpeciesLine || showName || (a.sex != null && a.sex!.trim().isNotEmpty)) const SizedBox(height: 4),
+                              Text(
+                                'Levensfase: ${_detectionLifeStageLabel(a.lifeStage!)}',
+                                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey.shade700,
+                                      fontSize: 13,
+                                    ),
+                              ),
+                            ],
+                            if (a.behaviour != null && a.behaviour!.trim().isNotEmpty) ...[
+                              if (hasSpeciesLine || showName) const SizedBox(height: 6),
+                              Text(
+                                a.behaviour!,
+                                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey.shade700,
+                                      fontSize: 12,
+                                    ),
+                                maxLines: 10,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                            if (a.description != null && a.description!.trim().isNotEmpty) ...[
+                              if (hasSpeciesLine || showName || (a.behaviour != null && a.behaviour!.trim().isNotEmpty))
+                                const SizedBox(height: 6),
+                              Text(
+                                a.description!,
+                                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 12,
+                                    ),
+                                maxLines: 10,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                })
+                else
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'Geen diergegevens beschikbaar.',
+                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                const SizedBox(height: 12),
+              ],
+
+              if (isDamage && (interaction.damageBelonging != null || interaction.damageEstimatedDamage != null ||
+                  interaction.damageEstimatedLoss != null || interaction.damageImpactType != null)) ...[
+                Text(
+                  'Schade',
+                  style: Theme.of(ctx).textTheme.titleSmall?.copyWith(
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
-              if (!isSighting && interaction.speciesCategory != null && interaction.speciesCategory!.isNotEmpty && (interaction.speciesCommonName == null || interaction.speciesCommonName!.isEmpty))
-                _detailRow(ctx, Icons.category, 'Categorie', interaction.speciesCategory!),
-              const SizedBox(height: 12),
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    [
+                      if (interaction.damageBelonging != null && interaction.damageBelonging!.trim().isNotEmpty)
+                        interaction.damageBelonging,
+                      if (interaction.damageEstimatedDamage != null) '€${interaction.damageEstimatedDamage} geschat',
+                      if (interaction.damageEstimatedLoss != null) '€${interaction.damageEstimatedLoss} verlies',
+                      if (interaction.damageImpactType != null && interaction.damageImpactValue != null)
+                        '${interaction.damageImpactValue} ${_interactionImpactTypeLabel(interaction.damageImpactType!)}',
+                    ].join(' · '),
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Colors.grey.shade700, fontSize: 13),
+                  ),
+                ),
+              ],
+
+              if (isCollision && (interaction.collisionEstimatedDamage != null ||
+                  interaction.collisionIntensity != null || interaction.collisionUrgency != null)) ...[
+                Text(
+                  'Aanrijding',
+                  style: Theme.of(ctx).textTheme.titleSmall?.copyWith(
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    [
+                      if (interaction.collisionEstimatedDamage != null)
+                        '€${interaction.collisionEstimatedDamage} geschat',
+                      if (interaction.collisionIntensity != null && interaction.collisionIntensity!.trim().isNotEmpty)
+                        _interactionIntensityOrUrgencyLabel(interaction.collisionIntensity!),
+                      if (interaction.collisionUrgency != null && interaction.collisionUrgency!.trim().isNotEmpty)
+                        _interactionIntensityOrUrgencyLabel(interaction.collisionUrgency!),
+                    ].join(' · '),
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Colors.grey.shade700, fontSize: 13),
+                  ),
+                ),
+              ],
+
+              if (!isSighting && interaction.description != null && interaction.description!.trim().isNotEmpty) ...[
+                Text(
+                  'Beschrijving',
+                  style: Theme.of(ctx).textTheme.titleSmall?.copyWith(
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    interaction.description!,
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Colors.grey.shade700),
+                    maxLines: 10,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+
+              if (!isSighting) ...[
+                if (interaction.reporterName != null && interaction.reporterName!.trim().isNotEmpty)
+                  _detailRow(ctx, Icons.person, 'Gemeld door', interaction.reporterName!),
+                if (interaction.momentReported != null)
+                  _detailRow(ctx, Icons.schedule, 'Gemeld op', formatMoment(interaction.momentReported!)),
+                if (interaction.moment != null)
+                  _detailRow(ctx, Icons.event, 'Gebeurd op', formatMoment(interaction.moment!)),
+              ],
               _detailRow(ctx, Icons.tag, 'ID', interaction.id),
               _detailRow(
                 ctx,
