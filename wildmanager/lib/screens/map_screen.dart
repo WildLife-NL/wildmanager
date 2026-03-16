@@ -750,6 +750,23 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  String _animalSpeciesDisplay(String? speciesCommonName, String? speciesLatinName) {
+    final common = speciesCommonName?.trim();
+    final latin = speciesLatinName?.trim();
+    if (common != null && common.isNotEmpty) {
+      if (latin != null && latin.isNotEmpty) return '$common ($latin)';
+      return common;
+    }
+    if (latin != null && latin.isNotEmpty) return latin;
+    return '—';
+  }
+
+  String _animalLocationDisplay(LatLng location, DateTime? locationTimestamp) {
+    final coords = '${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(5)}';
+    if (locationTimestamp != null) return '$coords (${formatMoment(locationTimestamp)})';
+    return coords;
+  }
+
   void _showAnimalDetail(Animal a) {
     showModalBottomSheet<void>(
       context: context,
@@ -807,18 +824,20 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              _detailRow(ctx, Icons.tag, 'ID', a.id),
-              if (a.speciesLatinName != null && a.speciesLatinName!.isNotEmpty)
-                _detailRow(ctx, Icons.science, 'Soort (wetenschappelijke naam)', a.speciesLatinName!),
-              if (a.locationTimestamp != null)
-                _detailRow(ctx, Icons.schedule, 'Tijdstip locatie', formatMoment(a.locationTimestamp!)),
-              const SizedBox(height: 12),
+              _detailRow(
+                ctx,
+                Icons.science,
+                'Soort',
+                _animalSpeciesDisplay(a.speciesCommonName, a.speciesLatinName),
+              ),
               _detailRow(
                 ctx,
                 Icons.location_on,
                 'Locatie',
-                '${a.location.latitude.toStringAsFixed(5)}, ${a.location.longitude.toStringAsFixed(5)}',
+                _animalLocationDisplay(a.location, a.locationTimestamp),
               ),
+              const SizedBox(height: 12),
+              _detailRow(ctx, Icons.tag, 'ID', a.id),
             ],
           ),
         ),
