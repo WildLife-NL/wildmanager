@@ -1,0 +1,26 @@
+name: wildlifenl_assets
+description: WildLifeNL assets – dierenfoto's, dier-iconen en overige app-icons. Herbruikbaar voor Wild Rapport, WildManager en andere apps.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.7.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
+
+flutter:
+  assets:
+    - assets/animals/
+    - assets/icons/animals/
+    - assets/icons/category/
+    - assets/icons/
+    - assets/icons/gender/
+    - assets/icons/possesion/
+    - assets/icons/possesion/gewassen/
+    - assets/icons/questionnaire/
+    - assets/icons/rapporteren/
