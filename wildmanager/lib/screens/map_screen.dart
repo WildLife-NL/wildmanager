@@ -730,7 +730,6 @@ class _MapScreenState extends State<MapScreen> {
     if (path != null) {
       return Image.asset(
         path,
-        package: _assetsPackage,
         width: size,
         height: size,
         fit: BoxFit.contain,
@@ -883,15 +882,12 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  static const String _assetsPackage = 'wildlifenl_assets';
-
   Widget _detectionIcon(String? species, {required double size}) {
     final iconName = resolveSpeciesToIconName(species) ?? species;
     final path = iconName != null && iconName.isNotEmpty ? getAnimalIconAssetPath(iconName) : null;
     if (path != null) {
       return Image.asset(
         path,
-        package: _assetsPackage,
         width: size,
         height: size,
         fit: BoxFit.contain,
@@ -1191,7 +1187,6 @@ class _MapScreenState extends State<MapScreen> {
         if (path != null) {
           return Image.asset(
             path,
-            package: _assetsPackage,
             width: size,
             height: size,
             fit: BoxFit.contain,
