@@ -1355,7 +1355,7 @@ class _MapScreenState extends State<MapScreen> {
     final minZoomRaw = zoomForMaxKm(_maxZoomOutKm, initialCenter.latitude, screenWidth);
     final minZoom = minZoomRaw.clamp(5.0, 12.0);
     final maxZoomRaw = zoomForMaxKm(_minVisibleWidthM / 1000.0, initialCenter.latitude, screenWidth);
-    final maxZoom = maxZoomRaw.clamp(14.0, 22.0);
+    final maxZoom = maxZoomRaw.clamp(14.0, 17.0);
 
     return PopScope(
       canPop: false,
