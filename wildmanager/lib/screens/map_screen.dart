@@ -1042,12 +1042,24 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
               const SizedBox(height: 16),
+              if (d.speciesCategory != null && d.speciesCategory!.trim().isNotEmpty)
+                _detailRow(ctx, Icons.category, 'Categorie', d.speciesCategory!),
               if (d.sex != null && d.sex!.trim().isNotEmpty)
-                _detailRow(ctx, Icons.wc, 'Geslacht', d.sex!),
+                _detailRow(ctx, Icons.wc, 'Geslacht', _detectionSexLabel(d.sex!)),
               if (d.condition != null && d.condition!.trim().isNotEmpty)
-                _detailRow(ctx, Icons.favorite, 'Conditie', d.condition!),
+                _detailRow(ctx, Icons.favorite, 'Conditie', _detectionConditionLabel(d.condition!)),
               if (d.lifeStage != null && d.lifeStage!.trim().isNotEmpty)
-                _detailRow(ctx, Icons.cake, 'Levensfase', d.lifeStage!),
+                _detailRow(ctx, Icons.cake, 'Levensfase', _detectionLifeStageLabel(d.lifeStage!)),
+              if (d.behaviour != null && d.behaviour!.trim().isNotEmpty)
+                _detailRow(ctx, Icons.pets, 'Gedrag', d.behaviour!),
+              if (d.confidence != null)
+                _detailRow(ctx, Icons.percent, 'Betrouwbaarheid', '${d.confidence}%'),
+              if (d.description != null && d.description!.trim().isNotEmpty)
+                _detailRow(ctx, Icons.description, 'Beschrijving', d.description!),
+              if (d.deploymentID != null && d.deploymentID!.trim().isNotEmpty)
+                _detailRow(ctx, Icons.sensors, 'Deployment', d.deploymentID!),
+              if (d.userName != null && d.userName!.trim().isNotEmpty)
+                _detailRow(ctx, Icons.person, 'Sensor eigenaar', d.userName!),
               if (d.moment != null)
                 _detailRow(ctx, Icons.schedule, 'Tijdstip', formatMoment(d.moment!)),
               const SizedBox(height: 12),
@@ -1075,6 +1087,43 @@ class _MapScreenState extends State<MapScreen> {
         return 'Chemisch';
       case DetectionType.other:
         return 'Detectie';
+    }
+  }
+
+  String _detectionSexLabel(String value) {
+    switch (value.toLowerCase()) {
+      case 'female':
+        return 'Vrouwelijk';
+      case 'male':
+        return 'Mannelijk';
+      default:
+        return value;
+    }
+  }
+
+  String _detectionConditionLabel(String value) {
+    switch (value.toLowerCase()) {
+      case 'healthy':
+        return 'Gezond';
+      case 'impaired':
+        return 'Verminderd';
+      case 'dead':
+        return 'Dood';
+      default:
+        return value;
+    }
+  }
+
+  String _detectionLifeStageLabel(String value) {
+    switch (value.toLowerCase()) {
+      case 'infant':
+        return 'Jong';
+      case 'adolescent':
+        return 'Adolescent';
+      case 'adult':
+        return 'Volwassen';
+      default:
+        return value;
     }
   }
 
