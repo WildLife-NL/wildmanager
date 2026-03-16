@@ -132,7 +132,6 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    // Preload alle diericonen zodat web release ze meeneemt en ze direct beschikbaar zijn.
     for (final key in getAllAnimalIconAssetKeys()) {
       rootBundle.load(key);
     }
@@ -156,13 +155,10 @@ class _MapScreenState extends State<MapScreen> {
       if (mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _updateVisibleKm();
-          Future.delayed(const Duration(milliseconds: 350), () {
-            if (!mounted) return;
-            _loadInteractions();
-            _scheduleLoadDetections();
-            if (_showAnimalsLayer) _scheduleLoadAnimals();
-            _scheduleInitialTileRefresh();
-          });
+          _scheduleInitialTileRefresh();
+          _loadInteractions();
+          _scheduleLoadDetections();
+          if (_showAnimalsLayer) _scheduleLoadAnimals();
         });
 
         _interactionsPollTimer = Timer.periodic(
@@ -184,7 +180,7 @@ class _MapScreenState extends State<MapScreen> {
   void _scheduleInitialTileRefresh() {
     if (_initialTileRefreshScheduled) return;
     _initialTileRefreshScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    void doRefresh() {
       if (!mounted) return;
       try {
         final center = _mapController.camera.center;
@@ -192,6 +188,18 @@ class _MapScreenState extends State<MapScreen> {
         _mapController.move(center, zoom);
         setState(() {});
       } catch (_) {}
+    }
+    Future.delayed(Duration.zero, () {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) => doRefresh());
+    });
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) => doRefresh());
+    });
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) => doRefresh());
     });
   }
 
