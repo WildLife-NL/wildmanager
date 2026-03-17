@@ -720,17 +720,60 @@ class _MapScreenState extends State<MapScreen> {
     final trails = _animalTrails;
     if (trails == null || trails.isEmpty) return [];
     final polylines = <Polyline>[];
+    final color = mapColorAnimalTrail.withValues(alpha: 0.85);
     for (final entry in trails.entries) {
       final points = entry.value;
       if (points.length < 2) continue;
-      // Magenta trail stands out on green terrain. For dashed line, use StrokePattern.dashed() when on flutter_map v7+.
-      polylines.add(Polyline(
-        points: points,
-        color: mapColorAnimalTrail.withValues(alpha: 0.85),
-        strokeWidth: 2.5,
-      ));
+      final segments = _dashedPolylineSegments(points, dashLengthM: 12, gapLengthM: 8);
+      for (final segment in segments) {
+        if (segment.length >= 2) {
+          polylines.add(Polyline(
+            points: segment,
+            color: color,
+            strokeWidth: 1.5,
+          ));
+        }
+      }
     }
     return polylines;
+  }
+
+  static List<List<LatLng>> _dashedPolylineSegments(List<LatLng> points, {required double dashLengthM, required double gapLengthM}) {
+    if (points.length < 2) return [];
+    const dist = Distance();
+    final cum = <double>[0.0];
+    for (int i = 1; i < points.length; i++) {
+      cum.add(cum.last + dist.as(LengthUnit.Meter, points[i - 1], points[i]));
+    }
+    final total = cum.last;
+    if (total <= 0) return [points];
+
+    LatLng pointAtDistance(double d) {
+      d = d.clamp(0.0, total);
+      int i = 0;
+      while (i < cum.length - 1 && cum[i + 1] < d) i++;
+      if (i >= cum.length - 1) return points.last;
+      final a = cum[i], b = cum[i + 1];
+      final t = (b > a) ? (d - a) / (b - a) : 0.0;
+      final p0 = points[i], p1 = points[i + 1];
+      return LatLng(p0.latitude + t * (p1.latitude - p0.latitude), p0.longitude + t * (p1.longitude - p0.longitude));
+    }
+
+    final result = <List<LatLng>>[];
+    double pos = 0;
+    while (pos < total) {
+      final dashEnd = (pos + dashLengthM).clamp(0.0, total);
+      if (dashEnd > pos) {
+        final segment = <LatLng>[pointAtDistance(pos)];
+        for (int i = 1; i < points.length; i++) {
+          if (cum[i] > pos && cum[i] < dashEnd) segment.add(points[i]);
+        }
+        segment.add(pointAtDistance(dashEnd));
+        if (segment.length >= 2) result.add(segment);
+      }
+      pos = pos + dashLengthM + gapLengthM;
+    }
+    return result;
   }
 
   Widget _animalIconWidget(String? speciesCommonName, double size) {
@@ -759,7 +802,6 @@ class _MapScreenState extends State<MapScreen> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: mapColorAnimal,
-            border: Border.all(color: Colors.white, width: 2),
             boxShadow: const [
               BoxShadow(color: Colors.black26, blurRadius: 2, offset: Offset(0, 1)),
             ],
@@ -861,7 +903,7 @@ class _MapScreenState extends State<MapScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Material(
-                    color: const Color(0xFF2E7D32),
+                    color: mapColorAnimal,
                     shape: const CircleBorder(),
                     child: Padding(
                       padding: const EdgeInsets.all(10),

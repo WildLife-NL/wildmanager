@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../models/interaction.dart';
 
-/// Kleur voor dierenmarkers en beweginglijnen (magenta, goed zichtbaar op groen terrein).
-const Color mapColorAnimal = Color(0xFFFF2D9A);
-const Color mapColorAnimalTrail = Color(0xFFFF2D9A);
+const Color mapColorAnimal = Color(0xFF6D4C41);
+const Color mapColorAnimalTrail = Color(0xFF6D4C41);
 
 Color colorForInteractionType(int typeId) {
   switch (typeId) {
