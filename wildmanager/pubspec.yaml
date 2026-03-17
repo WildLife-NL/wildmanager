@@ -65,34 +65,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/
+    - assets/icons/animals/
     - .env
-    - assets/icons/animals/bever.png
-    - assets/icons/animals/boommarter.png
-    - assets/icons/animals/bunzing.png
-    - assets/icons/animals/damhert.png
-    - assets/icons/animals/das.png
-    - assets/icons/animals/edelhert.png
-    - assets/icons/animals/eekhoorn.png
-    - assets/icons/animals/egel.png
-    - assets/icons/animals/europese_nerts.png
-    - assets/icons/animals/exmoorpony.png
-    - assets/icons/animals/galloway.png
-    - assets/icons/animals/goudjakhals.png
-    - assets/icons/animals/haas.png
-    - assets/icons/animals/hermelijn.png
-    - assets/icons/animals/hooglander.png
-    - assets/icons/animals/konijn.png
-    - assets/icons/animals/konikpaard.png
-    - assets/icons/animals/otter.png
-    - assets/icons/animals/ree.png
-    - assets/icons/animals/shetlandpony.png
-    - assets/icons/animals/steenmarter.png
-    - assets/icons/animals/taurus.png
-    - assets/icons/animals/vos.png
-    - assets/icons/animals/wezel.png
-    - assets/icons/animals/wild_kat.png
-    - assets/icons/animals/wild_zwijn.png
-    - assets/icons/animals/wisent.png
-    - assets/icons/animals/woelrat.png
-    - assets/icons/animals/wolf.png
