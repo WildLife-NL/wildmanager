@@ -975,7 +975,7 @@ class _MapScreenState extends State<MapScreen> {
       child: GestureDetector(
         onTap: () => _showDetectionAnimalPicker(d),
         child: Material(
-          color: d.type.color,
+          color: colorForDetectionType(d.type),
           shape: _detectionMarkerShape,
           elevation: 2,
           child: Center(
@@ -999,7 +999,7 @@ class _MapScreenState extends State<MapScreen> {
           clipBehavior: Clip.none,
           children: [
             Material(
-              color: d.type.color,
+              color: colorForDetectionType(d.type),
               shape: _detectionMarkerShape,
               elevation: 2,
               child: Center(
@@ -1053,7 +1053,7 @@ class _MapScreenState extends State<MapScreen> {
               const SizedBox(height: 16),
               ...list.map((d) => ListTile(
                 leading: Material(
-                  color: d.type.color,
+                  color: colorForDetectionType(d.type),
                   shape: _detectionMarkerShape,
                   child: Padding(
                     padding: const EdgeInsets.all(8),
@@ -1076,7 +1076,7 @@ class _MapScreenState extends State<MapScreen> {
                       height: 28,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: d.type.color,
+                        color: colorForDetectionType(d.type),
                       ),
                       alignment: Alignment.center,
                       child: Text(
@@ -1156,7 +1156,7 @@ class _MapScreenState extends State<MapScreen> {
                     constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                   ),
                   Material(
-                    color: d.type.color,
+                    color: colorForDetectionType(d.type),
                     shape: _detectionMarkerShape,
                     child: Padding(
                       padding: const EdgeInsets.all(10),
@@ -1298,7 +1298,7 @@ class _MapScreenState extends State<MapScreen> {
                     constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                   ),
                   Material(
-                    color: d.type.color,
+                    color: colorForDetectionType(d.type),
                     shape: _detectionMarkerShape,
                     child: Padding(
                       padding: const EdgeInsets.all(10),

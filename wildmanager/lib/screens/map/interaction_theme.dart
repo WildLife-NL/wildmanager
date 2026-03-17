@@ -1,9 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:wildlifenl_detection_components/wildlifenl_detection_components.dart';
 
 import '../../models/interaction.dart';
 
 const Color mapColorAnimal = Color(0xFFE91E8C);
 const Color mapColorAnimalTrail = Color(0xFFE91E8C);
+const Color mapColorDetection = Color(0xFF00BCD4);
+
+Color colorForDetectionType(DetectionType type) {
+  switch (type) {
+    case DetectionType.visual:
+      return mapColorDetection;
+    case DetectionType.acoustic:
+      return const Color(0xFFFF9800);
+    case DetectionType.chemical:
+    case DetectionType.other:
+      return Colors.grey;
+  }
+}
 
 Color colorForInteractionType(int typeId) {
   switch (typeId) {
