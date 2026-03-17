@@ -45,11 +45,6 @@ String iconNameToAssetFileName(String iconName) {
   return iconName.replaceAll(' ', '_');
 }
 
-String _capitalizeFileName(String name) {
-  if (name.isEmpty) return name;
-  return name[0].toUpperCase() + name.substring(1);
-}
-
 const String animalIconsAssetPath = 'assets/icons/animals';
 
 const List<String> animalIconAssetFileNames = [
@@ -87,7 +82,7 @@ const List<String> animalIconAssetFileNames = [
 String? getAnimalIconAssetPath(String iconName) {
   final fileName = iconNameToAssetFileName(iconName);
   if (animalIconAssetFileNames.contains(fileName)) {
-    return '$animalIconsAssetPath/${_capitalizeFileName(fileName)}.png';
+    return '$animalIconsAssetPath/${fileName.toLowerCase()}.png';
   }
   return null;
 }
@@ -95,7 +90,7 @@ String? getAnimalIconAssetPath(String iconName) {
 List<String> getAllAnimalIconAssetKeys() {
   return [
     for (final f in animalIconAssetFileNames)
-      '$animalIconsAssetPath/${_capitalizeFileName(f)}.png',
+      '$animalIconsAssetPath/${f.toLowerCase()}.png',
   ];
 }
 
