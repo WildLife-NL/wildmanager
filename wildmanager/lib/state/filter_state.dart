@@ -40,9 +40,9 @@ class FilterState {
   static FilterState get defaults {
     final now = DateTime.now();
     final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
-    final weekAgo = endOfToday.subtract(const Duration(days: 7));
+    final hours48Ago = endOfToday.subtract(const Duration(hours: 48));
     return const FilterState().copyWith(
-      momentAfter: weekAgo,
+      momentAfter: hours48Ago,
       momentBefore: endOfToday,
     );
   }

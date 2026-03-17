@@ -30,7 +30,7 @@ class MapLegend extends StatelessWidget {
             _row(context, theme.colorForInteractionType(interactionTypeSighting), 'Waarneming', isCircle: true),
             _row(context, theme.colorForInteractionType(interactionTypeDamage), 'Schade', isCircle: true),
             _row(context, theme.colorForInteractionType(interactionTypeCollision), 'Aanrijding', isCircle: true),
-            _row(context, const Color(0xFF2E7D32), 'Dieren', isCircle: true),
+            _row(context, theme.mapColorAnimal, 'Dieren', isCircle: true),
             _row(context, DetectionType.visual.color, 'Detectie visueel', isCircle: false),
             _row(context, DetectionType.acoustic.color, 'Detectie akoestisch', isCircle: false),
             _row(context, DetectionType.other.color, 'Detectie overig', isCircle: false),
