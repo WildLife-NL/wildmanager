@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../models/interaction.dart';
 
-const Color mapColorAnimal = Color(0xFF6D4C41);
-const Color mapColorAnimalTrail = Color(0xFF6D4C41);
+const Color mapColorAnimal = Color(0xFFE91E8C);
+const Color mapColorAnimalTrail = Color(0xFFE91E8C);
 
 Color colorForInteractionType(int typeId) {
   switch (typeId) {

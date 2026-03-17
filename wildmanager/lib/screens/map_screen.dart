@@ -720,60 +720,23 @@ class _MapScreenState extends State<MapScreen> {
     final trails = _animalTrails;
     if (trails == null || trails.isEmpty) return [];
     final polylines = <Polyline>[];
-    final color = mapColorAnimalTrail.withValues(alpha: 0.85);
+    const minAlpha = 0.06;
+    const maxAlpha = 0.9;
     for (final entry in trails.entries) {
       final points = entry.value;
       if (points.length < 2) continue;
-      final segments = _dashedPolylineSegments(points, dashLengthM: 12, gapLengthM: 8);
-      for (final segment in segments) {
-        if (segment.length >= 2) {
-          polylines.add(Polyline(
-            points: segment,
-            color: color,
-            strokeWidth: 1.5,
-          ));
-        }
+      final n = points.length;
+      for (int i = 0; i < n - 1; i++) {
+        final t = (n > 2) ? (i + 1) / (n - 1) : 1.0;
+        final alpha = minAlpha + (maxAlpha - minAlpha) * t;
+        polylines.add(Polyline(
+          points: [points[i], points[i + 1]],
+          color: mapColorAnimalTrail.withValues(alpha: alpha),
+          strokeWidth: 1.5,
+        ));
       }
     }
     return polylines;
-  }
-
-  static List<List<LatLng>> _dashedPolylineSegments(List<LatLng> points, {required double dashLengthM, required double gapLengthM}) {
-    if (points.length < 2) return [];
-    const dist = Distance();
-    final cum = <double>[0.0];
-    for (int i = 1; i < points.length; i++) {
-      cum.add(cum.last + dist.as(LengthUnit.Meter, points[i - 1], points[i]));
-    }
-    final total = cum.last;
-    if (total <= 0) return [points];
-
-    LatLng pointAtDistance(double d) {
-      d = d.clamp(0.0, total);
-      int i = 0;
-      while (i < cum.length - 1 && cum[i + 1] < d) i++;
-      if (i >= cum.length - 1) return points.last;
-      final a = cum[i], b = cum[i + 1];
-      final t = (b > a) ? (d - a) / (b - a) : 0.0;
-      final p0 = points[i], p1 = points[i + 1];
-      return LatLng(p0.latitude + t * (p1.latitude - p0.latitude), p0.longitude + t * (p1.longitude - p0.longitude));
-    }
-
-    final result = <List<LatLng>>[];
-    double pos = 0;
-    while (pos < total) {
-      final dashEnd = (pos + dashLengthM).clamp(0.0, total);
-      if (dashEnd > pos) {
-        final segment = <LatLng>[pointAtDistance(pos)];
-        for (int i = 1; i < points.length; i++) {
-          if (cum[i] > pos && cum[i] < dashEnd) segment.add(points[i]);
-        }
-        segment.add(pointAtDistance(dashEnd));
-        if (segment.length >= 2) result.add(segment);
-      }
-      pos = pos + dashLengthM + gapLengthM;
-    }
-    return result;
   }
 
   Widget _animalIconWidget(String? speciesCommonName, double size) {
@@ -789,6 +752,13 @@ class _MapScreenState extends State<MapScreen> {
       );
     }
     return Icon(Icons.pets, color: Colors.white, size: size);
+  }
+
+  String _animalTitleWithLatin(String commonName, String? latinName) {
+    if (latinName != null && latinName.trim().isNotEmpty) {
+      return '$commonName (${latinName.trim()})';
+    }
+    return commonName;
   }
 
   Marker _buildAnimalMarker(Animal a) {
@@ -807,11 +777,29 @@ class _MapScreenState extends State<MapScreen> {
             ],
           ),
           child: Center(
-            child: _animalIconWidget(a.displaySpecies, 22),
+            child: _animalMarkerIconWidget(a.displaySpecies, 22, iconColor: Colors.black),
           ),
         ),
       ),
     );
+  }
+
+  Widget _animalMarkerIconWidget(String? speciesCommonName, double size, {Color? iconColor}) {
+    final iconName = resolveSpeciesToIconName(speciesCommonName) ?? speciesCommonName;
+    final path = iconName != null && iconName.isNotEmpty ? getAnimalIconAssetPath(iconName) : null;
+    final color = iconColor ?? mapColorAnimal;
+    if (path != null) {
+      return Image.asset(
+        path,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        color: color,
+        colorBlendMode: BlendMode.srcIn,
+        errorBuilder: (_, __, ___) => Icon(Icons.pets, color: color, size: size),
+      );
+    }
+    return Icon(Icons.pets, color: color, size: size);
   }
 
   Widget _speciesDisplayWidget(BuildContext ctx, String? common, String? latin, {TextStyle? textStyle}) {
@@ -836,32 +824,6 @@ class _MapScreenState extends State<MapScreen> {
       return Text(l, style: style.copyWith(fontStyle: FontStyle.italic));
     }
     return Text('—', style: style);
-  }
-
-  Widget _detailRowWithChild(BuildContext context, IconData icon, String label, Widget valueChild) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: Colors.grey.shade600),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-                const SizedBox(height: 2),
-                valueChild,
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   String _animalLocationDisplay(LatLng location, DateTime? locationTimestamp) {
@@ -916,18 +878,9 @@ class _MapScreenState extends State<MapScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          a.speciesCommonName ?? a.displaySpecies ?? 'Dier',
+                          _animalTitleWithLatin(a.speciesCommonName ?? a.displaySpecies ?? 'Dier', a.speciesLatinName),
                           style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                         ),
-                        if (a.speciesCategory != null && a.speciesCategory!.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            a.speciesCategory!,
-                            style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                                  color: Colors.grey.shade700,
-                                ),
-                          ),
-                        ],
                         const SizedBox(height: 6),
                         Text(
                           a.name,
@@ -942,11 +895,13 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              _detailRowWithChild(
+              _detailRow(
                 ctx,
                 Icons.science,
-                'Soort',
-                _speciesDisplayWidget(ctx, a.speciesCommonName, a.speciesLatinName),
+                'Species',
+                a.speciesCategory?.trim().isNotEmpty == true
+                    ? a.speciesCategory!
+                    : (a.speciesCommonName ?? a.displaySpecies ?? '—'),
               ),
               _detailRow(
                 ctx,
