@@ -828,6 +828,21 @@ class _MapScreenState extends State<MapScreen> {
     return coords;
   }
 
+  String _locationWithTimestamp(LatLng location, DateTime? moment) {
+    final coords = '${location.latitude.toStringAsFixed(5)}, ${location.longitude.toStringAsFixed(5)}';
+    if (moment != null) return '$coords (${formatMoment(moment)})';
+    return coords;
+  }
+
+  static final RegExp _uuidLike = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+  bool _reporterNameIsReal(String? reporterName) {
+    if (reporterName == null || reporterName.trim().isEmpty) return false;
+    final t = reporterName.trim();
+    if (RegExp(r'^\d+$').hasMatch(t)) return false; // numeric ID
+    if (_uuidLike.hasMatch(t)) return false; // UUID
+    return true;
+  }
+
   void _showAnimalDetail(Animal a) {
     showModalBottomSheet<void>(
       context: context,
@@ -1339,7 +1354,6 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  /// Eén regel voor geslacht, levensfase, conditie, betrouwbaarheid (voor groepsoverzicht).
   String _detectionAnimalCompactLine(DetectionAnimal a) {
     final parts = <String>[];
     if (a.sex != null && a.sex!.trim().isNotEmpty) parts.add(_detectionSexLabel(a.sex!));
@@ -1567,10 +1581,10 @@ class _MapScreenState extends State<MapScreen> {
 
               if (isSighting) ...[
                 if (interaction.momentReported != null)
-                  _detailRow(ctx, Icons.schedule, 'Gemeld op', formatMoment(interaction.momentReported!)),
+                  _detailRow(ctx, Icons.schedule, 'Gemeld op', _locationWithTimestamp(interaction.location, interaction.momentReported)),
                 if (interaction.moment != null)
-                  _detailRow(ctx, Icons.event, 'Gebeurd op', formatMoment(interaction.moment!)),
-                if (interaction.reporterName != null && interaction.reporterName!.trim().isNotEmpty)
+                  _detailRow(ctx, Icons.event, 'Gebeurd op', _locationWithTimestamp(interaction.location, interaction.moment)),
+                if (_reporterNameIsReal(interaction.reporterName))
                   _detailRow(ctx, Icons.person, 'Gemeld door', interaction.reporterName!),
                 if (interaction.description != null && interaction.description!.trim().isNotEmpty)
                   _detailRow(ctx, Icons.description, 'Beschrijving', interaction.description!),
@@ -1584,8 +1598,6 @@ class _MapScreenState extends State<MapScreen> {
                   _detailRow(ctx, Icons.lightbulb_outline, 'Advies', interaction.speciesAdvice!),
                 if (interaction.speciesRoleInNature != null && interaction.speciesRoleInNature!.trim().isNotEmpty)
                   _detailRow(ctx, Icons.eco, 'Rol in de natuur', interaction.speciesRoleInNature!),
-                if (rawAnimals != null && rawAnimals.isNotEmpty)
-                  _detailRow(ctx, Icons.numbers, 'Aantal', '${rawAnimals.length}'),
                 const SizedBox(height: 8),
               ],
 
@@ -1768,20 +1780,13 @@ class _MapScreenState extends State<MapScreen> {
               ],
 
               if (!isSighting) ...[
-                if (interaction.reporterName != null && interaction.reporterName!.trim().isNotEmpty)
+                if (_reporterNameIsReal(interaction.reporterName))
                   _detailRow(ctx, Icons.person, 'Gemeld door', interaction.reporterName!),
                 if (interaction.momentReported != null)
-                  _detailRow(ctx, Icons.schedule, 'Gemeld op', formatMoment(interaction.momentReported!)),
+                  _detailRow(ctx, Icons.schedule, 'Gemeld op', _locationWithTimestamp(interaction.location, interaction.momentReported)),
                 if (interaction.moment != null)
-                  _detailRow(ctx, Icons.event, 'Gebeurd op', formatMoment(interaction.moment!)),
+                  _detailRow(ctx, Icons.event, 'Gebeurd op', _locationWithTimestamp(interaction.location, interaction.moment)),
               ],
-              _detailRow(ctx, Icons.tag, 'ID', interaction.id),
-              _detailRow(
-                ctx,
-                Icons.location_on,
-                'Locatie (waar gebeurd)',
-                '${interaction.location.latitude.toStringAsFixed(5)}, ${interaction.location.longitude.toStringAsFixed(5)}',
-              ),
             ],
           ),
         ),
