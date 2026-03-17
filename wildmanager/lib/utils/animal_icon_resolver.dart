@@ -80,9 +80,9 @@ const List<String> animalIconAssetFileNames = [
 ];
 
 String? getAnimalIconAssetPath(String iconName) {
-  final fileName = iconNameToAssetFileName(iconName);
+  final fileName = iconNameToAssetFileName(iconName).toLowerCase();
   if (animalIconAssetFileNames.contains(fileName)) {
-    return '$animalIconsAssetPath/${fileName.toLowerCase()}.png';
+    return '$animalIconsAssetPath/$fileName.png';
   }
   return null;
 }
