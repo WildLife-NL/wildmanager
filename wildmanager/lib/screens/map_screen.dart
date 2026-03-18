@@ -1365,7 +1365,7 @@ class _MapScreenState extends State<MapScreen> {
       case DetectionType.visual:
         return 'Visueel';
       case DetectionType.acoustic:
-        return 'Acoustisch';
+        return 'Akoestisch';
       case DetectionType.chemical:
         return 'Chemisch';
       case DetectionType.other:

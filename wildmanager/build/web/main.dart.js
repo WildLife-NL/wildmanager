@@ -99246,7 +99246,7 @@ apD(a,b){var s=this.c
 s.toString
 A.a29(new A.av7(this,a,b),s,!0,t.H)},
 GW(a){switch(a.a){case 0:return"Visueel"
-case 1:return"Acoustisch"
+case 1:return"Akoestisch"
 case 2:return"Chemisch"
 case 3:return"Detectie"}},
 GV(a){switch(a.toLowerCase()){case"female":return"Vrouwelijk"

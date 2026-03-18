@@ -111,7 +111,7 @@ class _InteractionFilterSheetState extends State<InteractionFilterSheet> {
             items: const [
               DropdownMenuItem(value: null, child: Text('Alle detecties')),
               DropdownMenuItem(value: DetectionType.visual, child: Text('Visueel')),
-              DropdownMenuItem(value: DetectionType.acoustic, child: Text('Acoustisch')),
+              DropdownMenuItem(value: DetectionType.acoustic, child: Text('Akoestisch')),
               DropdownMenuItem(value: DetectionType.other, child: Text('Overig')),
             ],
             onChanged: (v) => setState(() => _selectedDetectionType = v),
