@@ -640,13 +640,35 @@ class _MapScreenState extends State<MapScreen> {
     try {
       bounds = _mapController.camera.visibleBounds;
     } catch (_) {
-      return filtered.take(_maxVisibleMarkersCap).map((i) => _buildInteractionMarker(i)).toList();
+      final clusters = _clusteredInteractionMarkers(filtered);
+      return clusters.take(_maxVisibleMarkersCap).toList();
     }
     final inBounds = filtered.where((i) => pointInBounds(i.location, bounds)).toList();
-    final toShow = inBounds.length > _maxVisibleMarkersCap
-        ? inBounds.take(_maxVisibleMarkersCap).toList()
-        : inBounds;
-    return toShow.map((i) => _buildInteractionMarker(i)).toList();
+    final clusters = _clusteredInteractionMarkers(inBounds);
+    return clusters.take(_maxVisibleMarkersCap).toList();
+  }
+
+  static String _interactionLocationKey(LatLng loc) {
+    return '${loc.latitude.toStringAsFixed(6)}_${loc.longitude.toStringAsFixed(6)}';
+  }
+
+  List<Marker> _clusteredInteractionMarkers(List<Interaction> list) {
+    final sightings = list.where(_isSighting).toList();
+    final nonSightings = list.where((i) => !_isSighting(i)).toList();
+    final grouped = <String, List<Interaction>>{};
+    for (final i in sightings) {
+      grouped.putIfAbsent(_interactionLocationKey(i.location), () => []).add(i);
+    }
+    final markers = <Marker>[];
+    for (final g in grouped.values) {
+      if (g.length == 1) {
+        markers.add(_buildInteractionMarker(g.single));
+      } else {
+        markers.add(_buildInteractionClusterMarker(g));
+      }
+    }
+    markers.addAll(nonSightings.map(_buildInteractionMarker));
+    return markers;
   }
 
   bool _detectionInDateRange(Detection d, FilterState fs) {
@@ -1454,6 +1476,135 @@ class _MapScreenState extends State<MapScreen> {
           elevation: 2,
           child: Center(
             child: _interactionIcon(i, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+
+  int _interactionAnimalCount(Interaction i) {
+    final detailed = i.involvedAnimals?.length ?? 0;
+    if (detailed > 0) return detailed;
+    final named = i.involvedAnimalNames?.length ?? 0;
+    if (named > 0) return named;
+    return 1;
+  }
+
+  Marker _buildInteractionClusterMarker(List<Interaction> list) {
+    final i = list.first;
+    final color = colorForInteractionType(i.typeId);
+    final totalAnimals = list.fold<int>(0, (sum, x) => sum + _interactionAnimalCount(x));
+    return Marker(
+      point: i.location,
+      width: 44,
+      height: 44,
+      child: GestureDetector(
+        onTap: () => _showInteractionClusterDetail(list),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Material(
+              color: color,
+              shape: const CircleBorder(),
+              elevation: 2,
+              child: Center(
+                child: _interactionIcon(i, size: 22),
+              ),
+            ),
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color,
+                  border: Border.all(color: Colors.white, width: 1),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  totalAnimals > 99 ? '99+' : '$totalAnimals',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showInteractionClusterDetail(List<Interaction> list) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.25,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (ctx, scrollController) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: ListView(
+            controller: scrollController,
+            children: [
+              Text(
+                '${list.length} waarnemingen op deze locatie',
+                style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ...list.map((i) => ListTile(
+                    leading: Material(
+                      color: colorForInteractionType(i.typeId),
+                      shape: const CircleBorder(),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: _interactionIcon(i, size: 20),
+                      ),
+                    ),
+                    title: Text(
+                      i.speciesCommonName?.trim().isNotEmpty == true ? i.speciesCommonName! : 'Waarneming',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      i.moment != null ? formatMoment(i.moment!) : typeNameShortForInteraction(i),
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: colorForInteractionType(i.typeId),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '${_interactionAnimalCount(i)}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.chevron_right, color: Colors.grey),
+                      ],
+                    ),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      _showInteractionDetail(i);
+                    },
+                  )),
+            ],
           ),
         ),
       ),
