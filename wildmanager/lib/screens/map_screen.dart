@@ -648,27 +648,38 @@ class _MapScreenState extends State<MapScreen> {
     return clusters.take(_maxVisibleMarkersCap).toList();
   }
 
-  static String _interactionLocationKey(LatLng loc) {
-    return '${loc.latitude.toStringAsFixed(6)}_${loc.longitude.toStringAsFixed(6)}';
-  }
-
   List<Marker> _clusteredInteractionMarkers(List<Interaction> list) {
-    final sightings = list.where(_isSighting).toList();
-    final nonSightings = list.where((i) => !_isSighting(i)).toList();
-    final grouped = <String, List<Interaction>>{};
-    for (final i in sightings) {
-      grouped.putIfAbsent(_interactionLocationKey(i.location), () => []).add(i);
-    }
+    final grouped = _groupInteractionsByArea(list, radiusMeters: 25);
     final markers = <Marker>[];
-    for (final g in grouped.values) {
+    for (final g in grouped) {
       if (g.length == 1) {
         markers.add(_buildInteractionMarker(g.single));
       } else {
         markers.add(_buildInteractionClusterMarker(g));
       }
     }
-    markers.addAll(nonSightings.map(_buildInteractionMarker));
     return markers;
+  }
+
+  List<List<Interaction>> _groupInteractionsByArea(List<Interaction> list, {required double radiusMeters}) {
+    const dist = Distance();
+    final groups = <List<Interaction>>[];
+    for (final i in list) {
+      List<Interaction>? target;
+      for (final g in groups) {
+        final center = g.first.location;
+        if (dist.as(LengthUnit.Meter, center, i.location) <= radiusMeters) {
+          target = g;
+          break;
+        }
+      }
+      if (target != null) {
+        target.add(i);
+      } else {
+        groups.add([i]);
+      }
+    }
+    return groups;
   }
 
   bool _detectionInDateRange(Detection d, FilterState fs) {
@@ -1492,8 +1503,11 @@ class _MapScreenState extends State<MapScreen> {
 
   Marker _buildInteractionClusterMarker(List<Interaction> list) {
     final i = list.first;
-    final color = colorForInteractionType(i.typeId);
+    final allSameType = list.every((x) => x.typeId == i.typeId);
+    final allSightings = list.every(_isSighting);
+    final color = allSameType ? colorForInteractionType(i.typeId) : Colors.black87;
     final totalAnimals = list.fold<int>(0, (sum, x) => sum + _interactionAnimalCount(x));
+    final badgeCount = allSightings ? totalAnimals : list.length;
     return Marker(
       point: i.location,
       width: 44,
@@ -1508,7 +1522,9 @@ class _MapScreenState extends State<MapScreen> {
               shape: const CircleBorder(),
               elevation: 2,
               child: Center(
-                child: _interactionIcon(i, size: 22),
+                child: allSameType
+                    ? _interactionIcon(i, size: 22)
+                    : const Icon(Icons.layers, color: Colors.white, size: 20),
               ),
             ),
             Positioned(
@@ -1524,7 +1540,7 @@ class _MapScreenState extends State<MapScreen> {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  totalAnimals > 99 ? '99+' : '$totalAnimals',
+                  badgeCount > 99 ? '99+' : '$badgeCount',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
@@ -1540,6 +1556,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _showInteractionClusterDetail(List<Interaction> list) {
+    final allSightings = list.every(_isSighting);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -1554,7 +1571,9 @@ class _MapScreenState extends State<MapScreen> {
             controller: scrollController,
             children: [
               Text(
-                '${list.length} waarnemingen op deze locatie',
+                allSightings
+                    ? '${list.length} waarnemingen op deze locatie'
+                    : '${list.length} interacties op deze locatie',
                 style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
