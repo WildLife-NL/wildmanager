@@ -2,7 +2,7 @@ name: wildmanager
 description: "A new Flutter project."
 publish_to: 'none'
 <<<<<<< Updated upstream
-version: 1.0.0+20260317
+version: 1.0.0+20260423
 =======
 version: 1.0.0+20260423
 >>>>>>> Stashed changes
