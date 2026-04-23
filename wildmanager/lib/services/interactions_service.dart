@@ -6,7 +6,7 @@ import '../config/app_config.dart';
 import '../models/interaction.dart';
 
 const int _minRadiusMeters = 1;
-const int _maxRadiusMeters = 50000;
+const int _maxRadiusMeters = 10000;
 
 Future<List<Interaction>> fetchInteractions({
   required LatLng center,
@@ -18,11 +18,11 @@ Future<List<Interaction>> fetchInteractions({
   final radius = radiusMeters.clamp(_minRadiusMeters, _maxRadiusMeters);
   final api = HttpInteractionReadApi(baseUrl: AppConfig.loginBaseUrl);
   final raw = await api.queryInteractions(
-    areaLatitude: center.latitude,
-    areaLongitude: center.longitude,
-    areaRadiusMeters: radius,
-    momentAfter: momentAfter,
-    momentBefore: momentBefore,
+    latitude: center.latitude,
+    longitude: center.longitude,
+    radius: radius,
+    start: momentAfter,
+    end: momentBefore,
   );
 
   if (kDebugMode && raw.isNotEmpty) {
