@@ -654,13 +654,46 @@ class _MapScreenState extends State<MapScreen> {
     try {
       bounds = _mapController.camera.visibleBounds;
     } catch (_) {
-      return filtered.take(_maxVisibleMarkersCap).map((i) => _buildInteractionMarker(i)).toList();
+      final clusters = _clusteredInteractionMarkers(filtered);
+      return clusters.take(_maxVisibleMarkersCap).toList();
     }
     final inBounds = filtered.where((i) => pointInBounds(i.location, bounds)).toList();
-    final toShow = inBounds.length > _maxVisibleMarkersCap
-        ? inBounds.take(_maxVisibleMarkersCap).toList()
-        : inBounds;
-    return toShow.map((i) => _buildInteractionMarker(i)).toList();
+    final clusters = _clusteredInteractionMarkers(inBounds);
+    return clusters.take(_maxVisibleMarkersCap).toList();
+  }
+
+  List<Marker> _clusteredInteractionMarkers(List<Interaction> list) {
+    final grouped = _groupInteractionsByArea(list, radiusMeters: 25);
+    final markers = <Marker>[];
+    for (final g in grouped) {
+      if (g.length == 1) {
+        markers.add(_buildInteractionMarker(g.single));
+      } else {
+        markers.add(_buildInteractionClusterMarker(g));
+      }
+    }
+    return markers;
+  }
+
+  List<List<Interaction>> _groupInteractionsByArea(List<Interaction> list, {required double radiusMeters}) {
+    const dist = Distance();
+    final groups = <List<Interaction>>[];
+    for (final i in list) {
+      List<Interaction>? target;
+      for (final g in groups) {
+        final center = g.first.location;
+        if (dist.as(LengthUnit.Meter, center, i.location) <= radiusMeters) {
+          target = g;
+          break;
+        }
+      }
+      if (target != null) {
+        target.add(i);
+      } else {
+        groups.add([i]);
+      }
+    }
+    return groups;
   }
 
   bool _detectionInDateRange(Detection d, FilterState fs) {
@@ -1379,7 +1412,7 @@ class _MapScreenState extends State<MapScreen> {
       case DetectionType.visual:
         return 'Visueel';
       case DetectionType.acoustic:
-        return 'Acoustisch';
+        return 'Akoestisch';
       case DetectionType.chemical:
         return 'Chemisch';
       case DetectionType.other:
@@ -1468,6 +1501,143 @@ class _MapScreenState extends State<MapScreen> {
           elevation: 2,
           child: Center(
             child: _interactionIcon(i, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+
+  int _interactionAnimalCount(Interaction i) {
+    final detailed = i.involvedAnimals?.length ?? 0;
+    if (detailed > 0) return detailed;
+    final named = i.involvedAnimalNames?.length ?? 0;
+    if (named > 0) return named;
+    return 1;
+  }
+
+  Marker _buildInteractionClusterMarker(List<Interaction> list) {
+    final i = list.first;
+    final allSameType = list.every((x) => x.typeId == i.typeId);
+    final allSightings = list.every(_isSighting);
+    final color = allSameType ? colorForInteractionType(i.typeId) : Colors.black87;
+    final totalAnimals = list.fold<int>(0, (sum, x) => sum + _interactionAnimalCount(x));
+    final badgeCount = allSightings ? totalAnimals : list.length;
+    return Marker(
+      point: i.location,
+      width: 44,
+      height: 44,
+      child: GestureDetector(
+        onTap: () => _showInteractionClusterDetail(list),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Material(
+              color: color,
+              shape: const CircleBorder(),
+              elevation: 2,
+              child: Center(
+                child: allSameType
+                    ? _interactionIcon(i, size: 22)
+                    : const Icon(Icons.layers, color: Colors.white, size: 20),
+              ),
+            ),
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color,
+                  border: Border.all(color: Colors.white, width: 1),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  badgeCount > 99 ? '99+' : '$badgeCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showInteractionClusterDetail(List<Interaction> list) {
+    final allSightings = list.every(_isSighting);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.25,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (ctx, scrollController) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: ListView(
+            controller: scrollController,
+            children: [
+              Text(
+                allSightings
+                    ? '${list.length} waarnemingen op deze locatie'
+                    : '${list.length} interacties op deze locatie',
+                style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ...list.map((i) => ListTile(
+                    leading: Material(
+                      color: colorForInteractionType(i.typeId),
+                      shape: const CircleBorder(),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: _interactionIcon(i, size: 20),
+                      ),
+                    ),
+                    title: Text(
+                      i.speciesCommonName?.trim().isNotEmpty == true ? i.speciesCommonName! : 'Waarneming',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      i.moment != null ? formatMoment(i.moment!) : typeNameShortForInteraction(i),
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: colorForInteractionType(i.typeId),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '${_interactionAnimalCount(i)}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.chevron_right, color: Colors.grey),
+                      ],
+                    ),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      _showInteractionDetail(i);
+                    },
+                  )),
+            ],
           ),
         ),
       ),
