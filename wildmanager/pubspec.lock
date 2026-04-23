@@ -13,10 +13,10 @@ packages:
     dependency: transitive
     description:
       name: async
-      sha256: "758e6d74e971c3e5aceb4110bfd6698efc7f501675bcfe0c775459a8140750eb"
+      sha256: e2eb0491ba5ddb6177742d2da23904574082139b07c1e33b8503b9f46f3e1a37
       url: "https://pub.dev"
     source: hosted
-    version: "2.13.0"
+    version: "2.13.1"
   boolean_selector:
     dependency: transitive
     description:
@@ -316,10 +316,10 @@ packages:
     dependency: transitive
     description:
       name: logger
-      sha256: a7967e31b703831a893bbc3c3dd11db08126fe5f369b5c648a36f821979f5be3
+      sha256: "25aee487596a6257655a1e091ec2ae66bc30e7af663592cc3a27e6591e05035c"
       url: "https://pub.dev"
     source: hosted
-    version: "2.6.2"
+    version: "2.7.0"
   matcher:
     dependency: transitive
     description:
@@ -460,18 +460,18 @@ packages:
     dependency: "direct main"
     description:
       name: shared_preferences
-      sha256: "2939ae520c9024cb197fc20dee269cd8cdbf564c8b5746374ec6cacdc5169e64"
+      sha256: c3025c5534b01739267eb7d76959bbc25a6d10f6988e1c2a3036940133dd10bf
       url: "https://pub.dev"
     source: hosted
-    version: "2.5.4"
+    version: "2.5.5"
   shared_preferences_android:
     dependency: transitive
     description:
       name: shared_preferences_android
-      sha256: "8374d6200ab33ac99031a852eba4c8eb2170c4bf20778b3e2c9eccb45384fb41"
+      sha256: e8d4762b1e2e8578fc4d0fd548cebf24afd24f49719c08974df92834565e2c53
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.21"
+    version: "2.4.23"
   shared_preferences_foundation:
     dependency: transitive
     description:
@@ -492,10 +492,10 @@ packages:
     dependency: transitive
     description:
       name: shared_preferences_platform_interface
-      sha256: "57cbf196c486bc2cf1f02b85784932c6094376284b3ad5779d1b1c6c6a816b80"
+      sha256: "649dc798a33931919ea356c4305c2d1f81619ea6e92244070b520187b5140ef9"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.1"
+    version: "2.4.2"
   shared_preferences_web:
     dependency: transitive
     description:
@@ -601,10 +601,10 @@ packages:
     dependency: transitive
     description:
       name: vm_service
-      sha256: "45caa6c5917fa127b5dbcfbd1fa60b14e583afdc08bfc96dda38886ca252eb60"
+      sha256: "046d3928e16fa4dc46e8350415661755ab759d9fc97fc21b5ab295f71e4f0499"
       url: "https://pub.dev"
     source: hosted
-    version: "15.0.2"
+    version: "15.1.0"
   web:
     dependency: transitive
     description:
@@ -618,7 +618,7 @@ packages:
     description:
       path: wildlifenl_animal_components
       ref: main
-      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
+      resolved-ref: "0368106b3d73c8984e1acf97824e7e983882dba5"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "0.1.0"
@@ -627,7 +627,7 @@ packages:
     description:
       path: wildlifenl_assets_components
       ref: main
-      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
+      resolved-ref: "0368106b3d73c8984e1acf97824e7e983882dba5"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "0.1.0"
@@ -636,7 +636,7 @@ packages:
     description:
       path: wildlifenl_detection_components
       ref: main
-      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
+      resolved-ref: "0368106b3d73c8984e1acf97824e7e983882dba5"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "0.1.0"
@@ -645,7 +645,7 @@ packages:
     description:
       path: wildlifenl_interaction_components
       ref: main
-      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
+      resolved-ref: "0368106b3d73c8984e1acf97824e7e983882dba5"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "0.1.0"
@@ -654,7 +654,7 @@ packages:
     description:
       path: wildlifenl_login_components
       ref: main
-      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
+      resolved-ref: "0368106b3d73c8984e1acf97824e7e983882dba5"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "0.1.0"
@@ -663,7 +663,7 @@ packages:
     description:
       path: wildlifenl_map_logic_components
       ref: main
-      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
+      resolved-ref: "0368106b3d73c8984e1acf97824e7e983882dba5"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "1.0.0"
@@ -672,7 +672,7 @@ packages:
     description:
       path: wildlifenl_map_ui_components
       ref: main
-      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
+      resolved-ref: "0368106b3d73c8984e1acf97824e7e983882dba5"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "1.1.0"
@@ -681,7 +681,7 @@ packages:
     description:
       path: wildlifenl_visitation_components
       ref: main
-      resolved-ref: "6140a92677a08b8dbeb159bfee768b29b5dc52e2"
+      resolved-ref: "0368106b3d73c8984e1acf97824e7e983882dba5"
       url: "https://github.com/WildLife-NL/wildlifenl-components.git"
     source: git
     version: "0.1.0"

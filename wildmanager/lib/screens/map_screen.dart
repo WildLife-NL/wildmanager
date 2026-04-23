@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -292,6 +292,12 @@ class _MapScreenState extends State<MapScreen> {
         momentBefore: before,
         interactionTypeId: null,
       );
+      if (kDebugMode) {
+        debugPrint(
+          '[MapScreen] Interactions API: ${list.length} items (radius=${radiusMeters.clamp(1, 10000)}m, '
+          'after=${fs.momentAfter}, before=$before)',
+        );
+      }
 
       if (!mounted) return;
       if (requestId != _interactionRequestId) return;
@@ -306,6 +312,9 @@ class _MapScreenState extends State<MapScreen> {
       final listInRange = list
           .where((i) => _interactionInDateRange(i, fs) && fs.interactionTypeMatches(i.typeId))
           .toList();
+      if (kDebugMode) {
+        debugPrint('[MapScreen] Interactions na filter: ${listInRange.length} items');
+      }
       final merged = <String, Interaction>{};
       for (final i in _interactions ?? <Interaction>[]) {
         if (_interactionInDateRange(i, fs) && fs.interactionTypeMatches(i.typeId)) merged[i.id] = i;
@@ -323,9 +332,13 @@ class _MapScreenState extends State<MapScreen> {
       });
       _scheduleLoadDetections();
       if (_showAnimalsLayer) _scheduleLoadAnimals();
-    } catch (_) {
+    } catch (e, st) {
       if (!mounted) return;
       if (requestId != _interactionRequestId) return;
+      if (kDebugMode) {
+        debugPrint('[MapScreen] Interactions fout: $e');
+        debugPrint('[MapScreen] Interactions stack: $st');
+      }
       setState(() {
         _interactions = null;
         _interactionsLoading = false;
@@ -432,6 +445,7 @@ class _MapScreenState extends State<MapScreen> {
     } catch (e) {
       if (!mounted) return;
       if (requestId != _animalRequestId) return;
+      if (kDebugMode) debugPrint('[MapScreen] Animals fout: $e');
       setState(() {
         _animals = null;
         _animalTrails = null;

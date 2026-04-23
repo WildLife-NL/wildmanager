@@ -1,7 +1,11 @@
 name: wildmanager
 description: "A new Flutter project."
 publish_to: 'none'
+<<<<<<< Updated upstream
 version: 1.0.0+20260317
+=======
+version: 1.0.0+20260423
+>>>>>>> Stashed changes
 
 environment:
   sdk: ^3.9.2
@@ -65,7 +69,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+<<<<<<< Updated upstream
     - assets/
+=======
+    - assets/app_logo.png
+    - assets/icons/animals/
+>>>>>>> Stashed changes
     - .env
     - assets/icons/animals/bever.png
     - assets/icons/animals/boommarter.png
