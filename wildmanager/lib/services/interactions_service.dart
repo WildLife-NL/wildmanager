@@ -16,13 +16,15 @@ Future<List<Interaction>> fetchInteractions({
   int? interactionTypeId,
 }) async {
   final radius = radiusMeters.clamp(_minRadiusMeters, _maxRadiusMeters);
+  final end = momentBefore ?? DateTime.now();
+  final start = momentAfter ?? end.subtract(const Duration(days: 30));
   final api = HttpInteractionReadApi(baseUrl: AppConfig.loginBaseUrl);
   final raw = await api.queryInteractions(
     latitude: center.latitude,
     longitude: center.longitude,
     radius: radius,
-    start: momentAfter,
-    end: momentBefore,
+    start: start,
+    end: end,
   );
 
   if (kDebugMode && raw.isNotEmpty) {
@@ -31,11 +33,18 @@ Future<List<Interaction>> fetchInteractions({
   }
 
   final list = <Interaction>[];
+  var skippedParse = 0;
   for (final map in raw) {
     final i = Interaction.fromJson(map);
-    if (i == null) continue;
+    if (i == null) {
+      skippedParse++;
+      continue;
+    }
     if (interactionTypeId != null && i.typeId != interactionTypeId) continue;
     list.add(i);
+  }
+  if (kDebugMode && skippedParse > 0) {
+    debugPrint('[Interactions] Skipped $skippedParse item(s): JSON kon niet worden geparsed');
   }
   return list;
 }

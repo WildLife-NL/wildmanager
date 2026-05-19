@@ -1,6 +1,4 @@
 {
-  "buildCommand": "echo \"skip build\"",
-  "installCommand": "echo \"skip install\"",
   "outputDirectory": "build/web",
   "routes": [
     { "handle": "filesystem" },

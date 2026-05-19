@@ -102,7 +102,7 @@ class _MapScreenState extends State<MapScreen> {
 
   static bool _interactionInDateRange(Interaction i, FilterState fs) {
     if (fs.momentAfter == null && fs.momentBefore == null) return true;
-    final m = i.moment?.toLocal();
+    final m = (i.moment ?? i.momentReported)?.toLocal();
     if (m == null) return false;
     final afterStart = fs.momentAfter != null
         ? DateTime(fs.momentAfter!.year, fs.momentAfter!.month, fs.momentAfter!.day)
@@ -1905,7 +1905,9 @@ class _MapScreenState extends State<MapScreen> {
                       if (interaction.damageBelonging != null && interaction.damageBelonging!.trim().isNotEmpty)
                         interaction.damageBelonging,
                       if (interaction.damageEstimatedDamage != null) '€${interaction.damageEstimatedDamage} geschat',
-                      if (interaction.damageEstimatedLoss != null) '€${interaction.damageEstimatedLoss} verlies',
+                      if (interaction.damageEstimatedLoss != null &&
+                          interaction.damageEstimatedLoss!.trim().isNotEmpty)
+                        'Geschat verlies: ${interaction.damageEstimatedLoss}',
                       if (interaction.damageImpactType != null && interaction.damageImpactValue != null)
                         '${interaction.damageImpactValue} ${_interactionImpactTypeLabel(interaction.damageImpactType!)}',
                     ].join(' · '),

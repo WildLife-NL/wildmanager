@@ -49,6 +49,7 @@ class Interaction {
     this.reporterName,
     this.damageBelonging,
     this.damageEstimatedDamage,
+    /// Perceived loss band from API (`unknown`, `0-250`, `500-1000`, …).
     this.damageEstimatedLoss,
     this.damageImpactType,
     this.damageImpactValue,
@@ -84,7 +85,7 @@ class Interaction {
   /// reportOfDamage (type 2)
   final String? damageBelonging;
   final int? damageEstimatedDamage;
-  final int? damageEstimatedLoss;
+  final String? damageEstimatedLoss;
   final String? damageImpactType;
   final int? damageImpactValue;
   /// reportOfCollision (type 3)
@@ -119,6 +120,7 @@ class Interaction {
       var reportedStr = json['momentReported'] as String? ?? json['reportedAt'] as String? ?? json['createdAt'] as String? ?? json['reportMoment'] as String? ?? json['timestamp'] as String?;
       DateTime? momentReported;
       if (reportedStr != null) momentReported = DateTime.tryParse(reportedStr);
+      moment ??= momentReported;
 
       final description = json['description'] as String? ?? json['summary'] as String?;
       final reporterName = json['reporterName'] as String? ?? json['reporter_name'] as String? ?? json['createdBy'] as String? ?? json['userName'] as String? ?? (json['user'] as Map<String, dynamic>?)?['name'] as String? ?? (json['reporter'] as Map<String, dynamic>?)?['name'] as String?;
@@ -184,16 +186,16 @@ class Interaction {
       }
 
       int? damageEstimatedDamage;
-      int? damageEstimatedLoss;
+      String? damageEstimatedLoss;
       int? damageImpactValue;
       String? damageBelonging;
       String? damageImpactType;
       if (damageReport != null) {
         damageBelonging = damageReport['belonging'] as String?;
-        damageEstimatedDamage = (damageReport['estimatedDamage'] as num?)?.toInt();
-        damageEstimatedLoss = (damageReport['estimatedLoss'] as num?)?.toInt();
+        damageEstimatedDamage = _parseOptionalInt(damageReport['estimatedDamage']);
+        damageEstimatedLoss = _parseEstimatedLoss(damageReport['estimatedLoss']);
         damageImpactType = damageReport['impactType'] as String?;
-        damageImpactValue = (damageReport['impactValue'] as num?)?.toInt();
+        damageImpactValue = _parseOptionalInt(damageReport['impactValue']);
       }
 
       int? collisionEstimatedDamage;
@@ -247,6 +249,25 @@ class Interaction {
     } catch (_) {
       return null;
     }
+  }
+
+  static int? _parseOptionalInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value.trim());
+    return null;
+  }
+
+  /// API returns categorical strings (`0-250`, `500-1000`, `unknown`, …), not euros as int.
+  static String? _parseEstimatedLoss(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      final s = value.trim();
+      return s.isEmpty ? null : s;
+    }
+    if (value is num) return value.toString();
+    return value.toString().trim().isEmpty ? null : value.toString().trim();
   }
 
   static String _reportTypeLabel(int typeId) {
