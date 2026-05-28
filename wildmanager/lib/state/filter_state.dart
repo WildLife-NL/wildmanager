@@ -14,7 +14,7 @@ class FilterState {
     this.detectieAkoestisch = true,
     this.detectieOverig = true,
     this.showAnimals = true,
-    this.showAnimalPath = true,
+    this.showAnimalPath = false,
     this.showHeatmap = true,
     this.showLivingLab = true,
     this.heatmapRoodVanaf,
