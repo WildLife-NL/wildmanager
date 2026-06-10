@@ -10,6 +10,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wildlifenl_map_logic_components/wildlifenl_map_logic_components.dart';
 
+import '../auth/auth_flow.dart';
+import '../auth/auth_session.dart';
 import '../models/detection.dart';
 import '../models/interaction.dart';
 import '../models/living_lab.dart';
@@ -99,6 +101,16 @@ class _MapScreenState extends State<MapScreen> {
   String _versionLabel = '';
 
   int _interactionRequestId = 0;
+  bool _handlingUnauthorized = false;
+
+  Future<bool> _handleUnauthorizedIfNeeded(Object error) async {
+    if (!isUnauthorizedError(error) || _handlingUnauthorized || !mounted) {
+      return isUnauthorizedError(error);
+    }
+    _handlingUnauthorized = true;
+    await forceReLoginAfterUnauthorized(context);
+    return true;
+  }
 
   static bool _interactionInDateRange(Interaction i, FilterState fs) {
     if (fs.momentAfter == null && fs.momentBefore == null) return true;
@@ -335,6 +347,7 @@ class _MapScreenState extends State<MapScreen> {
     } catch (e, st) {
       if (!mounted) return;
       if (requestId != _interactionRequestId) return;
+      if (await _handleUnauthorizedIfNeeded(e)) return;
       if (kDebugMode) {
         debugPrint('[MapScreen] Interactions fout: $e');
         debugPrint('[MapScreen] Interactions stack: $st');
@@ -392,6 +405,7 @@ class _MapScreenState extends State<MapScreen> {
     } catch (e, st) {
       if (!mounted) return;
       if (requestId != _detectionRequestId) return;
+      if (await _handleUnauthorizedIfNeeded(e)) return;
       debugPrint('[MapScreen] Detections fout: $e');
       debugPrint('[MapScreen] Stack: $st');
       setState(() {
@@ -445,6 +459,7 @@ class _MapScreenState extends State<MapScreen> {
     } catch (e) {
       if (!mounted) return;
       if (requestId != _animalRequestId) return;
+      if (await _handleUnauthorizedIfNeeded(e)) return;
       if (kDebugMode) debugPrint('[MapScreen] Animals fout: $e');
       setState(() {
         _animals = null;
@@ -497,6 +512,7 @@ class _MapScreenState extends State<MapScreen> {
       _loadVisitation();
     } on LivingLabsException catch (e) {
       if (!mounted) return;
+      if (await _handleUnauthorizedIfNeeded(e)) return;
       setState(() => _livingLabs = null);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -563,8 +579,9 @@ class _MapScreenState extends State<MapScreen> {
         _heatmapCells = cells;
         _heatmapLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
+      if (await _handleUnauthorizedIfNeeded(e)) return;
       setState(() {
         _heatmapCells = null;
         _heatmapLoading = false;

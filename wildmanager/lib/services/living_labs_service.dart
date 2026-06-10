@@ -3,14 +3,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../auth/auth_session.dart';
 import '../config/app_config.dart';
 import '../models/living_lab.dart';
 
-const _bearerTokenKey = 'bearer_token';
-
 Future<List<LivingLab>> fetchLivingLabs() async {
   final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString(_bearerTokenKey);
+  final token = prefs.getString(bearerTokenKey);
   if (token == null || token.trim().isEmpty) {
     throw LivingLabsException('Geen inlogtoken');
   }
@@ -24,6 +23,9 @@ Future<List<LivingLab>> fetchLivingLabs() async {
     },
   );
 
+  if (response.statusCode == 401) {
+    throw LivingLabsException('Unauthorized (401) on GET /livinglabs/');
+  }
   if (response.statusCode != 200) {
     throw LivingLabsException(
       'Living labs ophalen mislukt: ${response.statusCode}',

@@ -1,5 +1,6 @@
 import 'package:wildlifenl_visitation_components/wildlifenl_visitation_components.dart';
 
+import '../auth/auth_session.dart';
 import '../config/app_config.dart';
 import '../models/living_lab.dart';
 
@@ -39,7 +40,8 @@ Future<List<HeatmapCell>> fetchVisitationForLivingLabs(
         cellSize: cellSize,
       );
       allCells.addAll(response.cells);
-    } catch (_) {
+    } catch (e) {
+      if (isUnauthorizedError(e)) rethrow;
       continue;
     }
   }

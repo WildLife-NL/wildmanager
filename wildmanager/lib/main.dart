@@ -4,20 +4,13 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wildlifenl_login_components/wildlifenl_login_components.dart';
 
+import 'auth/auth_flow.dart';
+import 'auth/auth_session.dart';
 import 'config/app_config.dart';
-import 'config/auth_roles.dart';
 import 'screens/login_screen.dart';
 import 'screens/map_screen.dart';
+import 'services/living_labs_service.dart';
 import 'state/map_filter_notifier.dart';
-
-const _bearerTokenKey = 'bearer_token';
-const _scopesKey = 'scopes';
-
-Future<void> _clearStoredAuth() async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.remove(_bearerTokenKey);
-  await prefs.remove(_scopesKey);
-}
 
 Future<void> main() async {
   try {
@@ -67,6 +60,7 @@ class AuthGate extends StatefulWidget {
 class _AuthGateState extends State<AuthGate> {
   bool _loading = true;
   bool _hasToken = false;
+  bool _sessionWasUnauthorized = false;
 
   @override
   void initState() {
@@ -76,12 +70,40 @@ class _AuthGateState extends State<AuthGate> {
 
   Future<void> _checkAuth() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString(_bearerTokenKey);
-    if (!mounted) return;
-    setState(() {
-      _loading = false;
-      _hasToken = token != null && token.trim().isNotEmpty;
-    });
+    final token = prefs.getString(bearerTokenKey);
+    if (token == null || token.trim().isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _hasToken = false;
+      });
+      return;
+    }
+
+    try {
+      await fetchLivingLabs();
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _hasToken = true;
+      });
+    } catch (e) {
+      if (isUnauthorizedError(e)) {
+        await clearStoredAuth();
+        if (!mounted) return;
+        setState(() {
+          _loading = false;
+          _hasToken = false;
+          _sessionWasUnauthorized = true;
+        });
+        return;
+      }
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _hasToken = true;
+      });
+    }
   }
 
   @override
@@ -94,37 +116,16 @@ class _AuthGateState extends State<AuthGate> {
     if (_hasToken) {
       return const MapScreen();
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+      if (_sessionWasUnauthorized) {
+        await showUnauthorizedAccessDialog(context);
+        if (!mounted) return;
+      }
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (context) => LoginScreen(
-            onLoginSuccess: (BuildContext context, dynamic user) async {
-              if (!userHasAllowedRole(user)) {
-                await _clearStoredAuth();
-                if (!context.mounted) return;
-                showDialog<void>(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Geen toegang'),
-                    content: const Text(noAllowedRoleMessage),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  ),
-                );
-                return;
-              }
-              if (!context.mounted) return;
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute<void>(builder: (_) => const MapScreen()),
-                (_) => false,
-              );
-            },
+            onLoginSuccess: completeLoginOrShowRoleError,
           ),
         ),
       );
