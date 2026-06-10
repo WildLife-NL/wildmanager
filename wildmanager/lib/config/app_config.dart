@@ -6,8 +6,11 @@ class AppConfig {
   static const String appName = 'WildManager';
 
   static String get loginBaseUrl {
-    final url = dotenv.env['DEV_BASE_URL']?.trim();
-    if (url == null || url.isEmpty) return '';
+    const fromDefine = String.fromEnvironment('DEV_BASE_URL');
+    final url = fromDefine.isNotEmpty
+        ? fromDefine
+        : (dotenv.env['DEV_BASE_URL']?.trim() ?? '');
+    if (url.isEmpty) return '';
     return url.replaceFirst(RegExp(r'/$'), '');
   }
 }

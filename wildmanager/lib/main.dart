@@ -20,7 +20,11 @@ Future<void> _clearStoredAuth() async {
 }
 
 Future<void> main() async {
-  await dotenv.load(fileName: '.env');
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    // Release web builds use --dart-define=DEV_BASE_URL=... (no .env asset in git).
+  }
   runApp(const MainApp());
 }
 

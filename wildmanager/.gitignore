@@ -11,7 +11,6 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
-.env
 
 # IntelliJ related
 *.iml
@@ -36,6 +35,12 @@ migrate_working_dir/
 !/build/web/
 !/build/web/**
 /coverage/
+
+# Secrets / local env — never commit (also overrides build/web un-ignore above)
+.env
+.env.*
+!.env.example
+build/web/assets/.env
 
 # Symbolication related
 app.*.symbols
